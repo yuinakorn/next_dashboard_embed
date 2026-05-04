@@ -1,37 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dashboard Hub
 
-## Getting Started
+Governed Dashboard Portal สำหรับบริหารจัดการ dashboard แบบ embed จากระบบภายนอก เช่น Looker Studio, Superset, Grafana, Metabase, Power BI หรือ provider อื่น ๆ
 
-First, run the development server:
+แนวคิดหลักของระบบคือให้หน่วยงานมีศูนย์กลางสำหรับจัดหมวดหมู่ dashboard, กำหนดสิทธิ์, ค้นหา, pin รายการสำคัญ, แยกข้อมูล public/internal และเตรียมต่อยอด workflow แบบ review/publish ในอนาคต
+
+## Screenshots
+
+### Internal Portal
+
+มุมมองผู้ใช้ที่ login แล้วผ่าน mock SSO session พร้อม role, category tree, dashboard ยอดนิยม, รายการล่าสุด, dashboard ของทีม และ favorite
+![Public Dashboard Center](public/screenshort/ss2.png)
+
+
+### Public Dashboard Center
+
+หน้า public สำหรับประชาชนทั่วไป เปิดดู dashboard ที่เป็นข้อมูลสาธารณะได้โดยไม่ต้อง login
+
+![Internal Portal](public/screenshort/ss1.png)
+
+## Current Scope
+
+ตอนนี้เป็น first slice สำหรับขึ้นระบบให้เห็นภาพรวมก่อน โดยยังใช้ mock data ทั้งหมด
+
+- หน้า internal portal ที่ `/`
+- หน้า public portal ที่ `/public`
+- mock SSO user, roles และ team
+- mock category tree
+- mock dashboard catalog
+- section หน้า Home: pinned, popular, recently updated, my team, favorites
+- แยก public dashboard ด้วย `status: published` และ `sensitivity: public`
+- fallback link สำหรับเปิด dashboard provider ภายนอก
+
+## Routes
+
+| Route | Description |
+| --- | --- |
+| `/` | Internal dashboard portal สำหรับผู้ใช้ที่ login แล้ว |
+| `/public` | Public dashboard center สำหรับประชาชนทั่วไป |
+
+## Project Structure
+
+```text
+src/
+  app/
+    page.tsx              # Internal portal home
+    public/page.tsx       # Public dashboard center
+    layout.tsx
+    globals.css
+  lib/
+    mock-portal-data.ts   # Mock SSO user, roles, categories, dashboards
+
+docs/
+  1.governed-dashboard-portal-phases.md
+
+public/
+  screenshort/
+    ss1.png
+    ss2.png
+```
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- [http://localhost:3000](http://localhost:3000)
+- [http://localhost:3000/public](http://localhost:3000/public)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Build:
 
-## Learn More
+```bash
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+Lint:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Auth And Data Plan
 
-## Deploy on Vercel
+ระบบจริงจะรับ SSO/JWT จากระบบ auth หลักของหน่วยงาน โดย JWT จะระบุข้อมูลผู้ใช้, role, team และ permission ที่ระบบ portal ใช้ตัดสินสิทธิ์
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+ในช่วง mock นี้ยังไม่มีการเชื่อมฐานข้อมูลและยังไม่อ่าน JWT จริง ข้อมูลทั้งหมดอยู่ใน:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# next_dashboard_embed
+```text
+src/lib/mock-portal-data.ts
+```
+
+## Roadmap
+
+เอกสาร phase หลักอยู่ที่:
+
+[docs/1.governed-dashboard-portal-phases.md](docs/1.governed-dashboard-portal-phases.md)
+
+phase ที่ควรต่อยอด:
+
+- role และ permission model
+- database schema สำหรับ category/dashboard/permission/audit log
+- dashboard CRUD
+- embed provider strategy
+- publish/review workflow
+- usage analytics และ stale dashboard warning
