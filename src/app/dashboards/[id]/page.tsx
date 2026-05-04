@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getDashboard } from "@/lib/db/dashboards";
 import { getEmbedStatusTone } from "@/lib/embed-policy";
-import { getDashboardById, mockCurrentUser } from "@/lib/mock-portal-data";
+import { mockCurrentUser } from "@/lib/mock-portal-data";
 import { canViewDashboard } from "@/lib/permissions";
 
 type DashboardViewerPageProps = {
@@ -12,7 +13,7 @@ type DashboardViewerPageProps = {
 
 export default async function DashboardViewerPage({ params }: DashboardViewerPageProps) {
   const { id } = await params;
-  const dashboard = getDashboardById(id);
+  const dashboard = await getDashboard(id, mockCurrentUser.id);
 
   if (!dashboard || !canViewDashboard(mockCurrentUser, dashboard)) {
     notFound();

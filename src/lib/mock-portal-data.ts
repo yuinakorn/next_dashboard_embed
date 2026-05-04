@@ -1,6 +1,6 @@
 import { mockCurrentUser } from "@/lib/mock-auth";
 import { canViewDashboard } from "@/lib/permissions";
-import type { Category, Dashboard } from "@/lib/portal-types";
+import type { AuditEvent, Category, Dashboard } from "@/lib/portal-types";
 
 export { mockCurrentUser };
 
@@ -242,6 +242,22 @@ export const myTeamDashboards = visibleDashboards.filter(
 
 export const favoriteDashboards = visibleDashboards.filter((dashboard) => dashboard.isFavorite);
 
+export const pendingReviewDashboards = visibleDashboards.filter(
+  (dashboard) => dashboard.status === "in_review",
+);
+
+export const recentlyPublishedDashboards = [...visibleDashboards]
+  .filter((dashboard) => dashboard.status === "published")
+  .sort(
+    (first, second) =>
+      new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime(),
+  )
+  .slice(0, 4);
+
+export const externalOnlyDashboards = visibleDashboards.filter(
+  (dashboard) => dashboard.embedStatus === "external_only" || dashboard.embedStatus === "blocked",
+);
+
 export const publicDashboards = mockDashboards.filter(
   (dashboard) => dashboard.status === "published" && dashboard.sensitivity === "public",
 );
@@ -255,3 +271,61 @@ export const publicPopularDashboards = [...publicDashboards].sort(
 export function getDashboardById(id: string): Dashboard | undefined {
   return mockDashboards.find((dashboard) => dashboard.id === id);
 }
+
+export const mockAuditEvents: AuditEvent[] = [
+  {
+    id: "audit-001",
+    actorUserId: "u-900",
+    actorName: "Executive Analytics Admin",
+    action: "dashboard.publish",
+    entityType: "dashboard",
+    entityId: "db-001",
+    entityTitle: "Hospital Executive KPI",
+    note: "Published after executive KPI metadata review.",
+    createdAt: "2026-05-04T09:10:00.000Z",
+  },
+  {
+    id: "audit-002",
+    actorUserId: "u-901",
+    actorName: "Operations Command Center",
+    action: "dashboard.update_embed_url",
+    entityType: "dashboard",
+    entityId: "db-002",
+    entityTitle: "ICU Bed Situation",
+    note: "Updated provider URL and marked embed status as unknown pending Superset configuration.",
+    createdAt: "2026-05-04T08:35:00.000Z",
+  },
+  {
+    id: "audit-003",
+    actorUserId: "u-001",
+    actorName: mockCurrentUser.name,
+    action: "dashboard.submit_review",
+    entityType: "dashboard",
+    entityId: "db-004",
+    entityTitle: "SSO Adoption Monitor",
+    note: "Submitted for review with external-only embed warning.",
+    createdAt: "2026-05-03T15:20:00.000Z",
+  },
+  {
+    id: "audit-004",
+    actorUserId: "u-700",
+    actorName: "Public Health Data Office",
+    action: "dashboard.publish",
+    entityType: "dashboard",
+    entityId: "db-006",
+    entityTitle: "Public Health Service Overview",
+    note: "Published as public dashboard with data source note.",
+    createdAt: "2026-05-03T11:05:00.000Z",
+  },
+  {
+    id: "audit-005",
+    actorUserId: "u-001",
+    actorName: mockCurrentUser.name,
+    action: "category.create_child",
+    entityType: "category",
+    entityId: "digital-health-data",
+    entityTitle: "Data Platform",
+    note: "Created child category under Digital Health Projects.",
+    createdAt: "2026-05-02T10:15:00.000Z",
+  },
+];

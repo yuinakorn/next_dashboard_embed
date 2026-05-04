@@ -1,11 +1,13 @@
 import {
+  externalOnlyDashboards,
   favoriteDashboards,
   mockCategories,
   mockCurrentUser,
   myTeamDashboards,
+  pendingReviewDashboards,
   pinnedDashboards,
   popularDashboards,
-  recentDashboards,
+  recentlyPublishedDashboards,
 } from "@/lib/mock-portal-data";
 import type {
   Category,
@@ -44,12 +46,14 @@ function MetricCard({
   label,
   value,
   detail,
+  href,
 }: {
   label: string;
   value: string;
   detail: string;
+  href?: string;
 }) {
-  return (
+  const content = (
     <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
       <div className="mt-3 flex items-end justify-between gap-4">
@@ -57,6 +61,16 @@ function MetricCard({
         <span className="text-right text-sm text-zinc-500">{detail}</span>
       </div>
     </section>
+  );
+
+  if (!href) {
+    return content;
+  }
+
+  return (
+    <Link href={href} className="block transition hover:-translate-y-0.5">
+      {content}
+    </Link>
   );
 }
 
@@ -132,6 +146,26 @@ function DashboardCard({ dashboard, compact = false }: { dashboard: Dashboard; c
   );
 }
 
+function QuickAction({
+  title,
+  description,
+  href,
+}: {
+  title: string;
+  description: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:shadow-md"
+    >
+      <h2 className="text-base font-semibold text-zinc-950">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-zinc-500">{description}</p>
+    </Link>
+  );
+}
+
 function CategoryNode({ category }: { category: Category }) {
   return (
     <li className="rounded-lg border border-zinc-200 bg-white p-3">
@@ -182,7 +216,7 @@ function DashboardSection({
 }
 
 export default function Home() {
-  const dashboardTotal = popularDashboards.length + recentDashboards.length;
+  const publishedCount = recentlyPublishedDashboards.length;
 
   return (
     <main className="min-h-screen bg-zinc-100 text-zinc-950">
@@ -200,7 +234,7 @@ export default function Home() {
               { label: "Catalog", href: "/catalog" },
               { label: "Categories", href: "#" },
               { label: "Review queue", href: "/review" },
-              { label: "Audit log", href: "#" },
+              { label: "Audit log", href: "/audit" },
             ].map((item) => (
               <Link
                 key={item.label}
@@ -257,10 +291,53 @@ export default function Home() {
 
           <div className="space-y-8 px-5 py-6 lg:px-8">
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <MetricCard label="Published dashboards" value="4" detail="visible now" />
-              <MetricCard label="In review" value="1" detail="owned by your team" />
-              <MetricCard label="Pinned by admin" value={String(pinnedDashboards.length)} detail="front page" />
-              <MetricCard label="Catalog activity" value={String(dashboardTotal)} detail="recent signals" />
+              <MetricCard
+                label="Published dashboards"
+                value={String(publishedCount)}
+                detail="recently visible"
+                href="/catalog"
+              />
+              <MetricCard
+                label="Pending review"
+                value={String(pendingReviewDashboards.length)}
+                detail="needs governance"
+                href="/review"
+              />
+              <MetricCard
+                label="Pinned by admin"
+                value={String(pinnedDashboards.length)}
+                detail="front page"
+                href="/catalog"
+              />
+              <MetricCard
+                label="External-only"
+                value={String(externalOnlyDashboards.length)}
+                detail="fallback needed"
+                href="/catalog"
+              />
+            </section>
+
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <QuickAction
+                title="Open Catalog"
+                description="Browse all visible dashboards with status, sensitivity, and embed health."
+                href="/catalog"
+              />
+              <QuickAction
+                title="Review Queue"
+                description="Approve or reject dashboards waiting for governance review."
+                href="/review"
+              />
+              <QuickAction
+                title="Audit Log"
+                description="Inspect activity history for dashboard and category changes."
+                href="/audit"
+              />
+              <QuickAction
+                title="Create Dashboard"
+                description="Add metadata, provider URL, fallback URL, tags, and embed health check."
+                href="/dashboards/new"
+              />
             </section>
 
             <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
@@ -289,21 +366,36 @@ export default function Home() {
 
             <DashboardSection
               title="Pinned By Leadership"
-              description="Dashboard ที่ถูกดันขึ้นหน้าแรกโดย admin หรือผู้บริหาร"
+              description="Dashboard สำคัญที่ถูกดันขึ้นหน้าแรกโดย admin หรือผู้บริหาร"
               dashboards={pinnedDashboards}
             />
 
             <div className="grid gap-8 xl:grid-cols-2">
               <DashboardSection
-                title="Popular"
-                description="เรียงจากจำนวนการเปิดดูใน portal"
-                dashboards={popularDashboards}
+                title="Pending Review"
+                description="รายการที่รอ approve/reject ก่อนเผยแพร่"
+                dashboards={pendingReviewDashboards}
                 compact
               />
               <DashboardSection
-                title="Recently Updated"
-                description="dashboard ล่าสุดที่ถูก update หรือส่ง review"
-                dashboards={recentDashboards}
+                title="Recently Published"
+                description="dashboard published ล่าสุดที่ผู้ใช้มองเห็นได้"
+                dashboards={recentlyPublishedDashboards}
+                compact
+              />
+            </div>
+
+            <div className="grid gap-8 xl:grid-cols-2">
+              <DashboardSection
+                title="Embed Attention"
+                description="dashboard ที่ควรใช้ fallback เพราะ iframe อาจถูก block"
+                dashboards={externalOnlyDashboards}
+                compact
+              />
+              <DashboardSection
+                title="Popular"
+                description="เรียงจากจำนวนการเปิดดูใน portal"
+                dashboards={popularDashboards}
                 compact
               />
             </div>

@@ -9,18 +9,18 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 ### Internal Portal
 
 มุมมองผู้ใช้ที่ login แล้วผ่าน mock SSO session พร้อม role, category tree, dashboard ยอดนิยม, รายการล่าสุด, dashboard ของทีม และ favorite
-![Public Dashboard Center](public/screenshort/ss2.png)
 
+![Internal Portal](public/screenshort/ss1.png)
 
 ### Public Dashboard Center
 
 หน้า public สำหรับประชาชนทั่วไป เปิดดู dashboard ที่เป็นข้อมูลสาธารณะได้โดยไม่ต้อง login
 
-![Internal Portal](public/screenshort/ss1.png)
+![Public Dashboard Center](public/screenshort/ss2.png)
 
 ## Current Scope
 
-ตอนนี้เป็น first slice สำหรับขึ้นระบบให้เห็นภาพรวมก่อน โดยยังใช้ mock data ทั้งหมด
+ตอนนี้ระบบเริ่มขยับจาก mock UI ไปสู่ DB-backed MVP แล้ว โดย MySQL ใช้ค่าจาก `.env`
 
 - หน้า internal portal ที่ `/`
 - หน้า public portal ที่ `/public`
@@ -28,6 +28,16 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 - หน้า embedded dashboard viewer ที่ `/dashboards/[id]`
 - หน้า mock create dashboard ที่ `/dashboards/new`
 - หน้า mock review queue ที่ `/review`
+- หน้า mock audit log ที่ `/audit`
+- MySQL migration สำหรับ schema หลักใน `migrations/001_init_dashboard_portal.sql`
+- DB-backed API:
+  - `GET /api/categories`
+  - `GET /api/dashboards`
+  - `POST /api/dashboards`
+- `/catalog` อ่านข้อมูลจาก MySQL จริง
+- `/dashboards/new` submit dashboard ลง MySQL จริง
+- `/dashboards/[id]` โหลด dashboard จาก MySQL จริง
+- Phase 4 Home discovery signals: pending review, recently published, external-only, quick actions
 - client-side validation, iframe preview และ mock submit result สำหรับ create flow
 - embed status policy: embeddable, unknown, external_only, blocked
 - server-side embed health check ที่ `POST /api/embed/check`
@@ -48,7 +58,10 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 | `/dashboards/db-001` | Embedded dashboard viewer ตัวอย่างด้วย Looker Studio |
 | `/dashboards/new` | Mock create dashboard form |
 | `/review` | Mock governance workflow สำหรับ approve/reject |
+| `/audit` | Mock audit log สำหรับ governance activity |
 | `/api/embed/check` | Server-side URL/header check สำหรับ embed health |
+| `/api/categories` | DB-backed categories API |
+| `/api/dashboards` | DB-backed dashboards API |
 
 ## Project Structure
 
@@ -62,11 +75,17 @@ src/
     dashboards/new/new-dashboard-form.tsx # Client form validation and preview
     review/page.tsx       # Mock governance review route
     review/review-queue.tsx # Client approve/reject state and audit trail
+    audit/page.tsx        # Mock audit log route
     api/embed/check/route.ts # Server-side embed health checker
+    api/categories/route.ts # DB-backed categories API
+    api/dashboards/route.ts # DB-backed dashboards API
     public/page.tsx       # Public dashboard center
     layout.tsx
     globals.css
   lib/
+    db/connection.ts      # MySQL connection pool
+    db/categories.ts      # Category repository
+    db/dashboards.ts      # Dashboard repository
     portal-types.ts       # Shared roles, permissions, user, category, dashboard types
     mock-auth.ts          # Mock JWT payload and current user mapping
     permissions.ts        # Permission helper functions
@@ -80,12 +99,23 @@ docs/
   3.category-dashboard-model.md
   4.embed-provider-strategy.md
   5.workflow-governance.md
+  6.home-discovery.md
 
 public/
   screenshort/
     ss1.png
     ss2.png
 ```
+
+## Database
+
+Run migration:
+
+```bash
+npm run db:migrate
+```
+
+The migration creates the database if needed, creates portal tables, and seeds initial teams, categories, scopes, and sample dashboards.
 
 ## Development
 
@@ -140,6 +170,7 @@ src/lib/mock-portal-data.ts
 - [docs/3.category-dashboard-model.md](docs/3.category-dashboard-model.md)
 - [docs/4.embed-provider-strategy.md](docs/4.embed-provider-strategy.md)
 - [docs/5.workflow-governance.md](docs/5.workflow-governance.md)
+- [docs/6.home-discovery.md](docs/6.home-discovery.md)
 
 phase ที่ควรต่อยอด:
 

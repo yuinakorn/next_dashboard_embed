@@ -22,6 +22,12 @@ export default function ReviewPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
+              href="/audit"
+              className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Audit log
+            </Link>
+            <Link
               href="/catalog"
               className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >

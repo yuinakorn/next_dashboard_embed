@@ -1,12 +1,15 @@
 import Link from "next/link";
+import { listDashboards } from "@/lib/db/dashboards";
 import { getEmbedStatusTone } from "@/lib/embed-policy";
-import { mockCurrentUser, mockDashboards, visibleDashboards } from "@/lib/mock-portal-data";
+import { mockCurrentUser } from "@/lib/mock-portal-data";
 import {
   canPublishDashboard,
   canUpdateDashboard,
   getUserPermissions,
 } from "@/lib/permissions";
 import type { Dashboard, DashboardStatus, SensitivityLevel } from "@/lib/portal-types";
+
+export const dynamic = "force-dynamic";
 
 const statusTone: Record<DashboardStatus, string> = {
   draft: "bg-zinc-100 text-zinc-700",
@@ -91,9 +94,10 @@ function CatalogRow({ dashboard }: { dashboard: Dashboard }) {
   );
 }
 
-export default function CatalogPage() {
+export default async function CatalogPage() {
+  const visibleDashboards = await listDashboards(mockCurrentUser.id);
   const permissions = getUserPermissions(mockCurrentUser);
-  const reviewCount = mockDashboards.filter(
+  const reviewCount = visibleDashboards.filter(
     (dashboard) => dashboard.status === "in_review" && dashboard.ownerTeamId === mockCurrentUser.teamId,
   ).length;
 
@@ -117,6 +121,12 @@ export default function CatalogPage() {
               className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
               Review queue
+            </Link>
+            <Link
+              href="/audit"
+              className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Audit log
             </Link>
             <Link
               href="/dashboards/new"

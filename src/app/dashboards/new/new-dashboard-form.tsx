@@ -23,6 +23,12 @@ type FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
+type CreatedDashboardResult = {
+  id: string;
+  title: string;
+  status: string;
+};
+
 const providerOptions: DashboardProvider[] = [
   "Looker Studio",
   "Superset",
@@ -118,6 +124,9 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitResult, setSubmitResult] = useState<string | null>(null);
+  const [submitResultType, setSubmitResultType] = useState<"success" | "error">("success");
+  const [createdDashboard, setCreatedDashboard] = useState<CreatedDashboardResult | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [healthResult, setHealthResult] = useState<EmbedHealthResult | null>(null);
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
 
@@ -133,6 +142,8 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
     setState((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
     setSubmitResult(null);
+    setSubmitResultType("success");
+    setCreatedDashboard(null);
     if (key === "embedUrl" || key === "provider") {
       setHealthResult(null);
     }
@@ -172,7 +183,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
     }
   }
 
-  function handleSubmit(intent: SubmitIntent) {
+  async function handleSubmit(intent: SubmitIntent) {
     const nextErrors = validateForm(state, intent);
     setErrors(nextErrors);
 
@@ -182,9 +193,58 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
     }
 
     const status = intent === "draft" ? "draft" : "in_review";
-    setSubmitResult(
-      `Mock saved as ${status}. This would create a dashboard record after the database layer is connected.`,
-    );
+    setIsSubmitting(true);
+    setSubmitResult(null);
+    setCreatedDashboard(null);
+
+    try {
+      const response = await fetch("/api/dashboards", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: state.title,
+          provider: state.provider,
+          description: state.description,
+          categoryId: state.categoryId,
+          sensitivity: state.sensitivity,
+          embedUrl: state.embedUrl,
+          externalUrl: state.externalUrl,
+          tags: state.tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+          refreshFrequency: state.refreshFrequency,
+          dataSourceNote: state.dataSourceNote,
+          status,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        const message = Array.isArray(payload.errors)
+          ? payload.errors.join(", ")
+          : payload.error ?? "Unable to save dashboard.";
+        setSubmitResult(message);
+        setSubmitResultType("error");
+        return;
+      }
+
+      setCreatedDashboard({
+        id: payload.dashboard.id,
+        title: payload.dashboard.title,
+        status: payload.dashboard.status,
+      });
+      setSubmitResult(`Saved as ${payload.dashboard.status} in MySQL.`);
+      setSubmitResultType("success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to save dashboard.";
+      setSubmitResult(message);
+      setSubmitResultType("error");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -197,8 +257,22 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
       </div>
 
       {submitResult ? (
-        <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+        <div
+          className={`mt-5 rounded-lg border p-4 text-sm font-medium ${
+            submitResultType === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-rose-200 bg-rose-50 text-rose-800"
+          }`}
+        >
           {submitResult}
+          {createdDashboard ? (
+            <a
+              href={`/dashboards/${createdDashboard.id}`}
+              className="ml-3 underline"
+            >
+              Open {createdDashboard.title}
+            </a>
+          ) : null}
         </div>
       ) : null}
 
@@ -418,16 +492,18 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
           <button
             type="button"
             className="h-10 rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            disabled={isSubmitting}
             onClick={() => handleSubmit("draft")}
           >
-            Save draft
+            {isSubmitting ? "Saving..." : "Save draft"}
           </button>
           <button
             type="button"
             className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800"
+            disabled={isSubmitting}
             onClick={() => handleSubmit("review")}
           >
-            Submit for review
+            {isSubmitting ? "Saving..." : "Submit for review"}
           </button>
         </div>
       </form>
