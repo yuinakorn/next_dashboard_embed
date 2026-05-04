@@ -1,67 +1,8 @@
-export type PortalRole =
-  | "system_admin"
-  | "category_admin"
-  | "project_manager"
-  | "editor"
-  | "viewer";
+import { mockCurrentUser } from "@/lib/mock-auth";
+import { canViewDashboard } from "@/lib/permissions";
+import type { Category, Dashboard } from "@/lib/portal-types";
 
-export type DashboardProvider =
-  | "Looker Studio"
-  | "Superset"
-  | "Grafana"
-  | "Metabase"
-  | "Power BI"
-  | "Custom";
-
-export type DashboardStatus = "draft" | "in_review" | "published" | "archived";
-
-export type SensitivityLevel = "public" | "internal" | "confidential";
-
-export type MockUser = {
-  id: string;
-  name: string;
-  title: string;
-  department: string;
-  teamId: string;
-  roles: PortalRole[];
-};
-
-export type Category = {
-  id: string;
-  name: string;
-  ownerTeamId: string;
-  dashboardCount: number;
-  children?: Category[];
-};
-
-export type Dashboard = {
-  id: string;
-  title: string;
-  description: string;
-  provider: DashboardProvider;
-  categoryId: string;
-  categoryName: string;
-  owner: string;
-  ownerTeamId: string;
-  status: DashboardStatus;
-  sensitivity: SensitivityLevel;
-  tags: string[];
-  views: number;
-  updatedAt: string;
-  isPinned: boolean;
-  isFavorite: boolean;
-  embedUrl: string;
-  externalUrl: string;
-};
-
-export const mockCurrentUser: MockUser = {
-  id: "u-001",
-  name: "นพ.กิตติพงศ์ วัฒนสุข",
-  title: "Project Manager",
-  department: "Digital Health Strategy",
-  teamId: "team-digital-health",
-  roles: ["project_manager", "editor", "viewer"],
-};
+export { mockCurrentUser };
 
 export const mockCategories: Category[] = [
   {
@@ -143,8 +84,12 @@ export const mockDashboards: Dashboard[] = [
     updatedAt: "2026-05-02",
     isPinned: true,
     isFavorite: true,
-    embedUrl: "https://lookerstudio.google.com/embed/reporting/demo",
-    externalUrl: "https://lookerstudio.google.com/",
+    embedUrl:
+      "https://datastudio.google.com/embed/reporting/6c23b3be-0b75-4fa9-9857-1e81a539d414/page/aEm2D",
+    externalUrl:
+      "https://datastudio.google.com/reporting/6c23b3be-0b75-4fa9-9857-1e81a539d414/page/aEm2D",
+    embedStatus: "embeddable",
+    embedStatusReason: "Looker Studio embed reporting URLs are designed for iframe usage.",
   },
   {
     id: "db-002",
@@ -164,6 +109,8 @@ export const mockDashboards: Dashboard[] = [
     isFavorite: false,
     embedUrl: "https://superset.apache.org/",
     externalUrl: "https://superset.apache.org/",
+    embedStatus: "unknown",
+    embedStatusReason: "Superset requires embed configuration, guest tokens, and compatible CSP headers.",
   },
   {
     id: "db-003",
@@ -183,6 +130,8 @@ export const mockDashboards: Dashboard[] = [
     isFavorite: true,
     embedUrl: "https://www.metabase.com/",
     externalUrl: "https://www.metabase.com/",
+    embedStatus: "external_only",
+    embedStatusReason: "This is a normal website URL, so iframe support depends on target-site headers.",
   },
   {
     id: "db-004",
@@ -202,6 +151,8 @@ export const mockDashboards: Dashboard[] = [
     isFavorite: false,
     embedUrl: "https://grafana.com/",
     externalUrl: "https://grafana.com/",
+    embedStatus: "external_only",
+    embedStatusReason: "This is a normal website URL, so it should use external fallback unless iframe is allowed.",
   },
   {
     id: "db-005",
@@ -221,6 +172,8 @@ export const mockDashboards: Dashboard[] = [
     isFavorite: false,
     embedUrl: "https://powerbi.microsoft.com/",
     externalUrl: "https://powerbi.microsoft.com/",
+    embedStatus: "unknown",
+    embedStatusReason: "Power BI private embeds may require Microsoft auth or an official embed token.",
   },
   {
     id: "db-006",
@@ -240,6 +193,8 @@ export const mockDashboards: Dashboard[] = [
     isFavorite: false,
     embedUrl: "https://lookerstudio.google.com/embed/reporting/demo",
     externalUrl: "https://lookerstudio.google.com/",
+    embedStatus: "embeddable",
+    embedStatusReason: "Looker Studio embed reporting URLs are designed for iframe usage.",
   },
   {
     id: "db-007",
@@ -259,11 +214,13 @@ export const mockDashboards: Dashboard[] = [
     isFavorite: false,
     embedUrl: "https://example.com",
     externalUrl: "https://example.com",
+    embedStatus: "external_only",
+    embedStatusReason: "Custom website URLs often block iframe with X-Frame-Options or CSP frame-ancestors.",
   },
 ];
 
 export const visibleDashboards = mockDashboards.filter(
-  (dashboard) => dashboard.status === "published" || dashboard.ownerTeamId === mockCurrentUser.teamId,
+  (dashboard) => canViewDashboard(mockCurrentUser, dashboard),
 );
 
 export const pinnedDashboards = visibleDashboards.filter((dashboard) => dashboard.isPinned);
@@ -294,3 +251,7 @@ export const publicPinnedDashboards = publicDashboards.filter((dashboard) => das
 export const publicPopularDashboards = [...publicDashboards].sort(
   (first, second) => second.views - first.views,
 );
+
+export function getDashboardById(id: string): Dashboard | undefined {
+  return mockDashboards.find((dashboard) => dashboard.id === id);
+}

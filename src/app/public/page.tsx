@@ -2,8 +2,8 @@ import {
   publicDashboards,
   publicPinnedDashboards,
   publicPopularDashboards,
-  type Dashboard,
 } from "@/lib/mock-portal-data";
+import type { Dashboard } from "@/lib/portal-types";
 import Link from "next/link";
 
 function PublicDashboardCard({ dashboard, featured = false }: { dashboard: Dashboard; featured?: boolean }) {
@@ -35,14 +35,12 @@ function PublicDashboardCard({ dashboard, featured = false }: { dashboard: Dashb
         <span>{dashboard.views.toLocaleString()} views</span>
       </div>
       <div className="mt-5 flex gap-2">
-        <a
-          href={dashboard.externalUrl}
+        <Link
+          href={`/dashboards/${dashboard.id}`}
           className="inline-flex h-10 items-center justify-center rounded-md bg-teal-700 px-4 text-sm font-medium text-white transition hover:bg-teal-800"
-          target="_blank"
-          rel="noreferrer"
         >
           เปิด dashboard
-        </a>
+        </Link>
         <Link
           href="/"
           className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"

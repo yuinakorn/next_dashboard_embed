@@ -6,12 +6,15 @@ import {
   pinnedDashboards,
   popularDashboards,
   recentDashboards,
-  type Category,
-  type Dashboard,
-  type DashboardProvider,
-  type DashboardStatus,
-  type SensitivityLevel,
 } from "@/lib/mock-portal-data";
+import type {
+  Category,
+  Dashboard,
+  DashboardProvider,
+  DashboardStatus,
+  SensitivityLevel,
+} from "@/lib/portal-types";
+import Link from "next/link";
 
 const providerStyles: Record<DashboardProvider, string> = {
   "Looker Studio": "border-sky-200 bg-sky-50 text-sky-800",
@@ -26,6 +29,7 @@ const statusLabels: Record<DashboardStatus, string> = {
   draft: "Draft",
   in_review: "In review",
   published: "Published",
+  rejected: "Rejected",
   archived: "Archived",
 };
 
@@ -33,6 +37,7 @@ const sensitivityLabels: Record<SensitivityLevel, string> = {
   public: "Public",
   internal: "Internal",
   confidential: "Confidential",
+  restricted: "Restricted",
 };
 
 function MetricCard({
@@ -108,21 +113,19 @@ function DashboardCard({ dashboard, compact = false }: { dashboard: Dashboard; c
         </div>
       ) : null}
       <div className="mt-4 flex gap-2">
-        <a
-          href={dashboard.externalUrl}
+        <Link
+          href={`/dashboards/${dashboard.id}`}
           className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-950 px-3 text-sm font-medium text-white transition hover:bg-zinc-800"
-          target="_blank"
-          rel="noreferrer"
         >
           Open
-        </a>
+        </Link>
         <a
-          href={dashboard.embedUrl}
+          href={dashboard.externalUrl}
           className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-300 px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
           target="_blank"
           rel="noreferrer"
         >
-          Embed source
+          Fallback
         </a>
       </div>
     </article>
@@ -192,18 +195,24 @@ export default function Home() {
             <h1 className="mt-2 text-2xl font-semibold leading-8">Dashboard Hub</h1>
           </div>
           <nav className="mt-8 space-y-1 text-sm font-medium">
-            {["Home", "Catalog", "Categories", "Review queue", "Audit log"].map((item) => (
-              <a
-                key={item}
-                href="#"
+            {[
+              { label: "Home", href: "/" },
+              { label: "Catalog", href: "/catalog" },
+              { label: "Categories", href: "#" },
+              { label: "Review queue", href: "#" },
+              { label: "Audit log", href: "#" },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
                 className={`block rounded-md px-3 py-2 ${
-                  item === "Home"
+                  item.label === "Home"
                     ? "bg-zinc-950 text-white"
                     : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
                 }`}
               >
-                {item}
-              </a>
+                {item.label}
+              </Link>
             ))}
           </nav>
           <div className="mt-8">
@@ -269,9 +278,12 @@ export default function Home() {
                   <option>Superset</option>
                   <option>Grafana</option>
                 </select>
-                <button className="h-11 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800">
+                <Link
+                  href="/dashboards/new"
+                  className="inline-flex h-11 items-center justify-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
+                >
                   New dashboard
-                </button>
+                </Link>
               </div>
             </section>
 

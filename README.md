@@ -24,6 +24,11 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 
 - หน้า internal portal ที่ `/`
 - หน้า public portal ที่ `/public`
+- หน้า dashboard catalog ที่ `/catalog`
+- หน้า embedded dashboard viewer ที่ `/dashboards/[id]`
+- หน้า mock create dashboard ที่ `/dashboards/new`
+- client-side validation, iframe preview และ mock submit result สำหรับ create flow
+- embed status policy: embeddable, unknown, external_only, blocked
 - mock SSO user, roles และ team
 - mock category tree
 - mock dashboard catalog
@@ -37,6 +42,9 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 | --- | --- |
 | `/` | Internal dashboard portal สำหรับผู้ใช้ที่ login แล้ว |
 | `/public` | Public dashboard center สำหรับประชาชนทั่วไป |
+| `/catalog` | Internal dashboard catalog พร้อม action ตาม permission mock |
+| `/dashboards/db-001` | Embedded dashboard viewer ตัวอย่างด้วย Looker Studio |
+| `/dashboards/new` | Mock create dashboard form |
 
 ## Project Structure
 
@@ -44,14 +52,26 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 src/
   app/
     page.tsx              # Internal portal home
+    catalog/page.tsx      # Internal catalog management
+    dashboards/[id]/page.tsx # Embedded dashboard viewer
+    dashboards/new/page.tsx # Mock create dashboard route
+    dashboards/new/new-dashboard-form.tsx # Client form validation and preview
     public/page.tsx       # Public dashboard center
     layout.tsx
     globals.css
   lib/
-    mock-portal-data.ts   # Mock SSO user, roles, categories, dashboards
+    portal-types.ts       # Shared roles, permissions, user, category, dashboard types
+    mock-auth.ts          # Mock JWT payload and current user mapping
+    permissions.ts        # Permission helper functions
+    category-utils.ts     # Category tree helpers
+    embed-policy.ts       # Embed URL assessment and status tone helpers
+    mock-portal-data.ts   # Mock categories and dashboards
 
 docs/
   1.governed-dashboard-portal-phases.md
+  2.roles-permissions.md
+  3.category-dashboard-model.md
+  4.embed-provider-strategy.md
 
 public/
   screenshort/
@@ -106,11 +126,16 @@ src/lib/mock-portal-data.ts
 
 [docs/1.governed-dashboard-portal-phases.md](docs/1.governed-dashboard-portal-phases.md)
 
+เอกสาร role/permission และ data model:
+
+- [docs/2.roles-permissions.md](docs/2.roles-permissions.md)
+- [docs/3.category-dashboard-model.md](docs/3.category-dashboard-model.md)
+- [docs/4.embed-provider-strategy.md](docs/4.embed-provider-strategy.md)
+
 phase ที่ควรต่อยอด:
 
-- role และ permission model
-- database schema สำหรับ category/dashboard/permission/audit log
 - dashboard CRUD
+- real form submission and validation
 - embed provider strategy
 - publish/review workflow
 - usage analytics และ stale dashboard warning
