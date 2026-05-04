@@ -113,6 +113,12 @@ export default function CatalogPage() {
               Home
             </Link>
             <Link
+              href="/review"
+              className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Review queue
+            </Link>
+            <Link
               href="/dashboards/new"
               className="inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800"
             >

@@ -7,6 +7,19 @@ export type EmbedAssessment = {
   recommendation: string;
 };
 
+export type EmbedHeaderSnapshot = {
+  httpStatus: number;
+  finalUrl: string;
+  xFrameOptions: string | null;
+  contentSecurityPolicy: string | null;
+  server: string | null;
+};
+
+export type EmbedHealthResult = EmbedAssessment & {
+  checkedAt: string;
+  headers: EmbedHeaderSnapshot | null;
+};
+
 function parseUrl(value: string): URL | null {
   try {
     return new URL(value);
@@ -100,4 +113,63 @@ export function getEmbedStatusTone(status: EmbedStatus): string {
   }
 
   return "border-zinc-200 bg-zinc-50 text-zinc-700";
+}
+
+export function assessEmbedHeaders(headers: EmbedHeaderSnapshot): EmbedAssessment {
+  const xFrameOptions = headers.xFrameOptions?.toLowerCase() ?? "";
+  const csp = headers.contentSecurityPolicy?.toLowerCase() ?? "";
+
+  if (headers.httpStatus === 401 || headers.httpStatus === 403) {
+    return {
+      status: "external_only",
+      label: "Auth or challenge response",
+      reason: `The target returned HTTP ${headers.httpStatus}, so iframe access may require auth, allowlisting, or challenge handling.`,
+      recommendation: "Keep this as external-only unless the target app can explicitly allow this portal domain.",
+    };
+  }
+
+  if (xFrameOptions.includes("deny") || xFrameOptions.includes("sameorigin")) {
+    return {
+      status: "external_only",
+      label: "Blocked by X-Frame-Options",
+      reason: `The target sends X-Frame-Options: ${headers.xFrameOptions}. Browsers block cross-origin iframe in this case.`,
+      recommendation: "Ask the target owner to remove X-Frame-Options and use CSP frame-ancestors to allow the portal domain.",
+    };
+  }
+
+  if (csp.includes("frame-ancestors")) {
+    const frameAncestors = csp.split("frame-ancestors")[1]?.split(";")[0] ?? "";
+
+    if (frameAncestors.includes("'none'") || frameAncestors.includes("'self'")) {
+      return {
+        status: "external_only",
+        label: "Restricted by CSP",
+        reason: "The target uses CSP frame-ancestors that does not clearly allow this portal domain.",
+        recommendation: "Ask the target owner to add the portal domain to Content-Security-Policy frame-ancestors.",
+      };
+    }
+
+    return {
+      status: "unknown",
+      label: "CSP frame policy present",
+      reason: "The target sends CSP frame-ancestors. Final browser behavior depends on whether this portal domain is allowed.",
+      recommendation: "Confirm that the production portal domain is included in frame-ancestors.",
+    };
+  }
+
+  if (headers.httpStatus >= 200 && headers.httpStatus < 300) {
+    return {
+      status: "unknown",
+      label: "No obvious frame block",
+      reason: "No X-Frame-Options or CSP frame-ancestors block was detected from the server response.",
+      recommendation: "Preview the iframe in browser and keep the fallback link available.",
+    };
+  }
+
+  return {
+    status: "unknown",
+    label: "Needs manual review",
+    reason: `The target returned HTTP ${headers.httpStatus}.`,
+    recommendation: "Open the fallback URL and confirm whether authentication or provider configuration is required.",
+  };
 }

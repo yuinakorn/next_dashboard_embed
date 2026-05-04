@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { CategoryOption } from "@/lib/category-utils";
 import { assessEmbedUrl, getEmbedStatusTone } from "@/lib/embed-policy";
+import type { EmbedHealthResult } from "@/lib/embed-policy";
 import type { DashboardProvider, SensitivityLevel } from "@/lib/portal-types";
 
 type SubmitIntent = "draft" | "review";
@@ -117,6 +118,8 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitResult, setSubmitResult] = useState<string | null>(null);
+  const [healthResult, setHealthResult] = useState<EmbedHealthResult | null>(null);
+  const [isCheckingHealth, setIsCheckingHealth] = useState(false);
 
   const previewUrl = useMemo(() => {
     return isHttpsUrl(state.embedUrl) ? state.embedUrl : "";
@@ -130,6 +133,43 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
     setState((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
     setSubmitResult(null);
+    if (key === "embedUrl" || key === "provider") {
+      setHealthResult(null);
+    }
+  }
+
+  async function checkEmbedHealth() {
+    if (!isHttpsUrl(state.embedUrl)) {
+      setErrors((current) => ({ ...current, embedUrl: "Embed URL must be a valid HTTPS URL." }));
+      return;
+    }
+
+    setIsCheckingHealth(true);
+    setHealthResult(null);
+
+    try {
+      const response = await fetch("/api/embed/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: state.embedUrl }),
+      });
+      const result = (await response.json()) as EmbedHealthResult;
+      setHealthResult(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to check embed URL.";
+      setHealthResult({
+        status: "unknown",
+        label: "Health check failed",
+        reason: message,
+        recommendation: "Keep the external fallback URL available.",
+        checkedAt: new Date().toISOString(),
+        headers: null,
+      });
+    } finally {
+      setIsCheckingHealth(false);
+    }
   }
 
   function handleSubmit(intent: SubmitIntent) {
@@ -295,12 +335,60 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
               <h3 className="text-sm font-semibold text-zinc-800">Embed preview</h3>
               <p className="mt-1 text-sm text-zinc-500">{embedAssessment.reason}</p>
             </div>
-            <span
-              className={`w-fit rounded-md border px-2 py-1 text-xs font-medium ${getEmbedStatusTone(embedAssessment.status)}`}
-            >
-              {embedAssessment.label}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`w-fit rounded-md border px-2 py-1 text-xs font-medium ${getEmbedStatusTone(embedAssessment.status)}`}
+              >
+                {embedAssessment.label}
+              </span>
+              <button
+                type="button"
+                className="h-9 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!previewUrl || isCheckingHealth}
+                onClick={checkEmbedHealth}
+              >
+                {isCheckingHealth ? "Checking..." : "Check embed health"}
+              </button>
+            </div>
           </div>
+          {healthResult ? (
+            <div className="border-b border-zinc-200 px-4 py-3">
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div
+                    className={`w-fit rounded-md border px-2 py-1 text-xs font-medium ${getEmbedStatusTone(healthResult.status)}`}
+                  >
+                    {healthResult.label}
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-zinc-600">{healthResult.reason}</p>
+                  <p className="mt-1 text-sm leading-6 text-zinc-500">{healthResult.recommendation}</p>
+                </div>
+                <div className="text-sm text-zinc-500 md:text-right">
+                  <div>Checked {new Date(healthResult.checkedAt).toLocaleString()}</div>
+                  {healthResult.headers ? (
+                    <>
+                      <div className="mt-1">HTTP {healthResult.headers.httpStatus}</div>
+                      <div className="mt-1">Server: {healthResult.headers.server ?? "unknown"}</div>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+              {healthResult.headers ? (
+                <dl className="mt-3 grid gap-2 rounded-md bg-zinc-50 p-3 text-xs text-zinc-600 md:grid-cols-2">
+                  <div>
+                    <dt className="font-semibold text-zinc-800">X-Frame-Options</dt>
+                    <dd className="mt-1 break-words">{healthResult.headers.xFrameOptions ?? "not present"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-zinc-800">Content-Security-Policy</dt>
+                    <dd className="mt-1 break-words">
+                      {healthResult.headers.contentSecurityPolicy ?? "not present"}
+                    </dd>
+                  </div>
+                </dl>
+              ) : null}
+            </div>
+          ) : null}
           {previewUrl && embedAssessment.status !== "external_only" ? (
             <iframe
               title="New dashboard embed preview"

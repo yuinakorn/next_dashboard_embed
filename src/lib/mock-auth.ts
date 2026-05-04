@@ -6,7 +6,7 @@ export const mockJwtPayload: MockJwtPayload = {
   title: "Project Manager",
   department: "Digital Health Strategy",
   team_id: "team-digital-health",
-  roles: ["project_manager", "editor", "viewer"],
+  roles: ["category_admin", "project_manager", "editor", "viewer"],
   scopes: [
     {
       teamId: "team-digital-health",

@@ -199,7 +199,7 @@ export default function Home() {
               { label: "Home", href: "/" },
               { label: "Catalog", href: "/catalog" },
               { label: "Categories", href: "#" },
-              { label: "Review queue", href: "#" },
+              { label: "Review queue", href: "/review" },
               { label: "Audit log", href: "#" },
             ].map((item) => (
               <Link

@@ -27,8 +27,10 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 - หน้า dashboard catalog ที่ `/catalog`
 - หน้า embedded dashboard viewer ที่ `/dashboards/[id]`
 - หน้า mock create dashboard ที่ `/dashboards/new`
+- หน้า mock review queue ที่ `/review`
 - client-side validation, iframe preview และ mock submit result สำหรับ create flow
 - embed status policy: embeddable, unknown, external_only, blocked
+- server-side embed health check ที่ `POST /api/embed/check`
 - mock SSO user, roles และ team
 - mock category tree
 - mock dashboard catalog
@@ -45,6 +47,8 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 | `/catalog` | Internal dashboard catalog พร้อม action ตาม permission mock |
 | `/dashboards/db-001` | Embedded dashboard viewer ตัวอย่างด้วย Looker Studio |
 | `/dashboards/new` | Mock create dashboard form |
+| `/review` | Mock governance workflow สำหรับ approve/reject |
+| `/api/embed/check` | Server-side URL/header check สำหรับ embed health |
 
 ## Project Structure
 
@@ -56,6 +60,9 @@ src/
     dashboards/[id]/page.tsx # Embedded dashboard viewer
     dashboards/new/page.tsx # Mock create dashboard route
     dashboards/new/new-dashboard-form.tsx # Client form validation and preview
+    review/page.tsx       # Mock governance review route
+    review/review-queue.tsx # Client approve/reject state and audit trail
+    api/embed/check/route.ts # Server-side embed health checker
     public/page.tsx       # Public dashboard center
     layout.tsx
     globals.css
@@ -72,6 +79,7 @@ docs/
   2.roles-permissions.md
   3.category-dashboard-model.md
   4.embed-provider-strategy.md
+  5.workflow-governance.md
 
 public/
   screenshort/
@@ -131,6 +139,7 @@ src/lib/mock-portal-data.ts
 - [docs/2.roles-permissions.md](docs/2.roles-permissions.md)
 - [docs/3.category-dashboard-model.md](docs/3.category-dashboard-model.md)
 - [docs/4.embed-provider-strategy.md](docs/4.embed-provider-strategy.md)
+- [docs/5.workflow-governance.md](docs/5.workflow-governance.md)
 
 phase ที่ควรต่อยอด:
 

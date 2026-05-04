@@ -89,3 +89,15 @@ export type MockJwtPayload = {
   iat: number;
   exp: number;
 };
+
+export type AuditEvent = {
+  id: string;
+  actorUserId: string;
+  actorName: string;
+  action: string;
+  entityType: "dashboard" | "category" | "permission";
+  entityId: string;
+  entityTitle: string;
+  note: string;
+  createdAt: string;
+};
