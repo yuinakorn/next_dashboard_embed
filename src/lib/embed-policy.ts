@@ -34,9 +34,9 @@ export function assessEmbedUrl(provider: DashboardProvider, value: string): Embe
   if (!url || url.protocol !== "https:") {
     return {
       status: "blocked",
-      label: "Invalid embed URL",
-      reason: "Embed URLs must be valid HTTPS URLs.",
-      recommendation: "Use a public HTTPS embed URL and keep an external fallback URL.",
+      label: "URL ไม่ถูกต้อง",
+      reason: "Embed URL ต้องเป็น HTTPS URL ที่ถูกต้อง",
+      recommendation: "ใช้ HTTPS embed URL และเก็บ external fallback URL ไว้เสมอ",
     };
   }
 
@@ -50,52 +50,52 @@ export function assessEmbedUrl(provider: DashboardProvider, value: string): Embe
     ) {
       return {
         status: "embeddable",
-        label: "Likely embeddable",
-        reason: "Looker Studio embed reporting URLs are designed for iframe usage.",
-        recommendation: "Preview the iframe and keep the non-embed report URL as fallback.",
+        label: "มีแนวโน้มฝังได้",
+        reason: "Looker Studio embed reporting URL ถูกออกแบบมาให้ใช้กับ iframe",
+        recommendation: "ตรวจ preview iframe และเก็บ report URL แบบ non-embed เป็น fallback",
       };
     }
 
     return {
       status: "unknown",
-      label: "Needs embed URL",
-      reason: "Looker Studio links should usually contain /embed/reporting/ for iframe usage.",
-      recommendation: "Use File > Embed report in Looker Studio and paste the embed URL.",
+      label: "ควรใช้ Embed URL",
+      reason: "Looker Studio link ควรมี /embed/reporting/ เพื่อใช้กับ iframe",
+      recommendation: "ใช้เมนู Embed report ใน Looker Studio แล้วนำ embed URL มาใส่",
     };
   }
 
   if (provider === "Superset") {
     return {
       status: "unknown",
-      label: "Provider configuration required",
-      reason: "Superset iframe support depends on embedded dashboards, guest tokens, and CSP settings.",
-      recommendation: "Confirm Superset embed settings and test with the portal domain allowlisted.",
+      label: "ต้องตั้งค่า Provider",
+      reason: "Superset จะ iframe ได้ขึ้นกับ embedded dashboard, guest token และ CSP",
+      recommendation: "ตรวจการตั้งค่า Superset และ allowlist domain ของ portal",
     };
   }
 
   if (provider === "Power BI") {
     return {
       status: "unknown",
-      label: "Authentication may be required",
-      reason: "Power BI private reports often require Microsoft auth or an embed token.",
-      recommendation: "Use an official Power BI embed URL and keep a fallback link.",
+      label: "อาจต้องยืนยันตัวตน",
+      reason: "Power BI private report มักต้องใช้ Microsoft auth หรือ embed token",
+      recommendation: "ใช้ Power BI embed URL ที่ถูกต้อง และเก็บ fallback link ไว้",
     };
   }
 
   if (provider === "Custom") {
     return {
       status: "external_only",
-      label: "External-first URL",
-      reason: "Normal websites frequently block iframe with X-Frame-Options or CSP frame-ancestors.",
-      recommendation: "Treat this as external-only unless the target site explicitly allows this portal domain.",
+      label: "ควรเปิดภายนอก",
+      reason: "เว็บไซต์ทั่วไปมักบล็อก iframe ด้วย X-Frame-Options หรือ CSP frame-ancestors",
+      recommendation: "ให้ถือเป็น external-only ยกเว้นเว็บปลายทางอนุญาต domain ของ portal ชัดเจน",
     };
   }
 
   return {
     status: "unknown",
-    label: "Needs testing",
-    reason: "This provider's iframe support depends on its security headers and authentication model.",
-    recommendation: "Preview the iframe and keep the external fallback URL available.",
+    label: "ต้องทดสอบเพิ่มเติม",
+    reason: "การ iframe ได้หรือไม่ขึ้นกับ security header และรูปแบบ auth ของ Provider",
+    recommendation: "ลอง preview iframe และเก็บ external fallback URL ไว้",
   };
 }
 
@@ -122,18 +122,18 @@ export function assessEmbedHeaders(headers: EmbedHeaderSnapshot): EmbedAssessmen
   if (headers.httpStatus === 401 || headers.httpStatus === 403) {
     return {
       status: "external_only",
-      label: "Auth or challenge response",
-      reason: `The target returned HTTP ${headers.httpStatus}, so iframe access may require auth, allowlisting, or challenge handling.`,
-      recommendation: "Keep this as external-only unless the target app can explicitly allow this portal domain.",
+      label: "ติด Auth หรือ Challenge",
+      reason: `ปลายทางตอบ HTTP ${headers.httpStatus} จึงอาจต้องใช้ auth, allowlist หรือจัดการ challenge ก่อน iframe`,
+      recommendation: "ให้ใช้ external-only จนกว่าเว็บปลายทางจะอนุญาต domain ของ portal ชัดเจน",
     };
   }
 
   if (xFrameOptions.includes("deny") || xFrameOptions.includes("sameorigin")) {
     return {
       status: "external_only",
-      label: "Blocked by X-Frame-Options",
-      reason: `The target sends X-Frame-Options: ${headers.xFrameOptions}. Browsers block cross-origin iframe in this case.`,
-      recommendation: "Ask the target owner to remove X-Frame-Options and use CSP frame-ancestors to allow the portal domain.",
+      label: "ถูกบล็อกด้วย X-Frame-Options",
+      reason: `ปลายทางส่ง X-Frame-Options: ${headers.xFrameOptions} ทำให้ browser บล็อก cross-origin iframe`,
+      recommendation: "ให้เจ้าของเว็บปลายทางปรับ X-Frame-Options และใช้ CSP frame-ancestors เพื่ออนุญาต portal domain",
     };
   }
 
@@ -143,33 +143,33 @@ export function assessEmbedHeaders(headers: EmbedHeaderSnapshot): EmbedAssessmen
     if (frameAncestors.includes("'none'") || frameAncestors.includes("'self'")) {
       return {
         status: "external_only",
-        label: "Restricted by CSP",
-        reason: "The target uses CSP frame-ancestors that does not clearly allow this portal domain.",
-        recommendation: "Ask the target owner to add the portal domain to Content-Security-Policy frame-ancestors.",
+        label: "ถูกจำกัดด้วย CSP",
+        reason: "ปลายทางใช้ CSP frame-ancestors ที่ยังไม่อนุญาต domain ของ portal อย่างชัดเจน",
+        recommendation: "ให้เจ้าของเว็บเพิ่ม portal domain ใน Content-Security-Policy frame-ancestors",
       };
     }
 
     return {
       status: "unknown",
-      label: "CSP frame policy present",
-      reason: "The target sends CSP frame-ancestors. Final browser behavior depends on whether this portal domain is allowed.",
-      recommendation: "Confirm that the production portal domain is included in frame-ancestors.",
+      label: "พบ CSP frame policy",
+      reason: "ปลายทางส่ง CSP frame-ancestors การแสดงผลจริงขึ้นกับว่าอนุญาต portal domain หรือไม่",
+      recommendation: "ยืนยันว่า production portal domain อยู่ใน frame-ancestors แล้ว",
     };
   }
 
   if (headers.httpStatus >= 200 && headers.httpStatus < 300) {
     return {
       status: "unknown",
-      label: "No obvious frame block",
-      reason: "No X-Frame-Options or CSP frame-ancestors block was detected from the server response.",
-      recommendation: "Preview the iframe in browser and keep the fallback link available.",
+      label: "ยังไม่พบตัวบล็อกชัดเจน",
+      reason: "ไม่พบ X-Frame-Options หรือ CSP frame-ancestors ที่บล็อกจาก response",
+      recommendation: "ลอง preview iframe ใน browser และเก็บ fallback link ไว้",
     };
   }
 
   return {
     status: "unknown",
-    label: "Needs manual review",
-    reason: `The target returned HTTP ${headers.httpStatus}.`,
-    recommendation: "Open the fallback URL and confirm whether authentication or provider configuration is required.",
+    label: "ควรตรวจสอบเอง",
+    reason: `ปลายทางตอบ HTTP ${headers.httpStatus}`,
+    recommendation: "เปิด fallback URL เพื่อตรวจว่าต้อง login หรือตั้งค่า Provider เพิ่มหรือไม่",
   };
 }

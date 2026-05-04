@@ -57,45 +57,45 @@ function isHttpsUrl(value: string): boolean {
 
 function getProviderHint(provider: DashboardProvider): string {
   if (provider === "Looker Studio") {
-    return "Looker Studio embed URL should usually contain /embed/reporting/.";
+    return "Looker Studio ควรใช้ embed URL ที่มี /embed/reporting/";
   }
 
   if (provider === "Superset") {
-    return "Superset may require guest token or public dashboard configuration.";
+    return "Superset อาจต้องตั้งค่า embedded dashboard, guest token หรือ allow domain";
   }
 
   if (provider === "Power BI") {
-    return "Power BI private reports may require Microsoft auth in the embedded frame.";
+    return "Power BI แบบ private อาจต้องใช้ Microsoft auth หรือ embed token";
   }
 
-  return "If this provider blocks iframe, users can still open the external fallback.";
+  return "ถ้า Provider บล็อก iframe ผู้ใช้ยังเปิดผ่าน external fallback ได้";
 }
 
 function validateForm(state: FormState, intent: SubmitIntent): FormErrors {
   const errors: FormErrors = {};
 
   if (!state.title.trim()) {
-    errors.title = "Dashboard title is required.";
+    errors.title = "กรุณาระบุชื่อ Dashboard";
   }
 
   if (state.description.trim().length < 20) {
-    errors.description = "Description should explain the dashboard purpose.";
+    errors.description = "คำอธิบายควรบอกวัตถุประสงค์ของ Dashboard";
   }
 
   if (!state.categoryId) {
-    errors.categoryId = "Choose an allowed category.";
+    errors.categoryId = "กรุณาเลือกหมวดหมู่ที่คุณมีสิทธิ์";
   }
 
   if (!isHttpsUrl(state.embedUrl)) {
-    errors.embedUrl = "Embed URL must be a valid HTTPS URL.";
+    errors.embedUrl = "Embed URL ต้องเป็น HTTPS URL ที่ถูกต้อง";
   }
 
   if (!isHttpsUrl(state.externalUrl)) {
-    errors.externalUrl = "Fallback URL must be a valid HTTPS URL.";
+    errors.externalUrl = "Fallback URL ต้องเป็น HTTPS URL ที่ถูกต้อง";
   }
 
   if (state.sensitivity === "public" && intent === "review" && !state.dataSourceNote.trim()) {
-    errors.dataSourceNote = "Public dashboards need a data source note before review.";
+    errors.dataSourceNote = "Dashboard แบบ Public ต้องระบุที่มา/ข้อจำกัดของข้อมูลก่อนส่งตรวจ";
   }
 
   return errors;
@@ -151,7 +151,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
 
   async function checkEmbedHealth() {
     if (!isHttpsUrl(state.embedUrl)) {
-      setErrors((current) => ({ ...current, embedUrl: "Embed URL must be a valid HTTPS URL." }));
+      setErrors((current) => ({ ...current, embedUrl: "Embed URL ต้องเป็น HTTPS URL ที่ถูกต้อง" }));
       return;
     }
 
@@ -169,12 +169,12 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
       const result = (await response.json()) as EmbedHealthResult;
       setHealthResult(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to check embed URL.";
+      const message = error instanceof Error ? error.message : "ไม่สามารถตรวจสอบ Embed URL ได้";
       setHealthResult({
         status: "unknown",
-        label: "Health check failed",
+        label: "ตรวจสอบไม่สำเร็จ",
         reason: message,
-        recommendation: "Keep the external fallback URL available.",
+        recommendation: "ควรเก็บ external fallback URL ไว้เสมอ",
         checkedAt: new Date().toISOString(),
         headers: null,
       });
@@ -225,7 +225,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
       if (!response.ok) {
         const message = Array.isArray(payload.errors)
           ? payload.errors.join(", ")
-          : payload.error ?? "Unable to save dashboard.";
+          : payload.error ?? "ไม่สามารถบันทึก Dashboard ได้";
         setSubmitResult(message);
         setSubmitResultType("error");
         return;
@@ -236,10 +236,10 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
         title: payload.dashboard.title,
         status: payload.dashboard.status,
       });
-      setSubmitResult(`Saved as ${payload.dashboard.status} in MySQL.`);
+      setSubmitResult(`บันทึกลง MySQL แล้ว สถานะ: ${payload.dashboard.status}`);
       setSubmitResultType("success");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to save dashboard.";
+      const message = error instanceof Error ? error.message : "ไม่สามารถบันทึก Dashboard ได้";
       setSubmitResult(message);
       setSubmitResultType("error");
     } finally {
@@ -250,9 +250,9 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="border-b border-zinc-200 pb-4">
-        <h2 className="text-lg font-semibold">Dashboard Metadata</h2>
+        <h2 className="text-lg font-semibold">ข้อมูลกำกับ Dashboard</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          This form validates locally and returns a mock submit result. Persistence will be added with the database layer.
+          ฟอร์มนี้ตรวจข้อมูลเบื้องต้นและบันทึก Dashboard ลง MySQL ผ่าน API จริง
         </p>
       </div>
 
@@ -270,7 +270,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
               href={`/dashboards/${createdDashboard.id}`}
               className="ml-3 underline"
             >
-              Open {createdDashboard.title}
+              เปิด {createdDashboard.title}
             </a>
           ) : null}
         </div>
@@ -279,7 +279,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
       <form className="mt-5 space-y-5" onSubmit={(event) => event.preventDefault()}>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Dashboard title</span>
+            <span className="text-sm font-medium text-zinc-700">ชื่อ Dashboard</span>
             <input
               className="mt-2 h-11 w-full rounded-md border border-zinc-300 px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-zinc-500"
               placeholder="เช่น ICU Bed Situation"
@@ -304,7 +304,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
         </div>
 
         <label className="block">
-          <span className="text-sm font-medium text-zinc-700">Description</span>
+          <span className="text-sm font-medium text-zinc-700">คำอธิบาย</span>
           <textarea
             className="mt-2 min-h-28 w-full rounded-md border border-zinc-300 px-3 py-3 text-sm leading-6 outline-none placeholder:text-zinc-400 focus:border-zinc-500"
             placeholder="อธิบายว่า dashboard นี้ใช้ตอบคำถามอะไร ใครเป็นผู้รับผิดชอบ และข้อมูลควรถูกใช้อย่างไร"
@@ -316,7 +316,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Category scope</span>
+            <span className="text-sm font-medium text-zinc-700">หมวดหมู่ที่มีสิทธิ์</span>
             <select
               className="mt-2 h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500"
               value={state.categoryId}
@@ -332,7 +332,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             <FieldError message={errors.categoryId} />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Sensitivity</span>
+            <span className="text-sm font-medium text-zinc-700">ระดับข้อมูล</span>
             <select
               className="mt-2 h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500"
               value={state.sensitivity}
@@ -379,7 +379,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Refresh frequency</span>
+            <span className="text-sm font-medium text-zinc-700">ความถี่การอัปเดต</span>
             <select
               className="mt-2 h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500"
               value={state.refreshFrequency}
@@ -393,7 +393,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
         </div>
 
         <label className="block">
-          <span className="text-sm font-medium text-zinc-700">Data source note</span>
+          <span className="text-sm font-medium text-zinc-700">หมายเหตุแหล่งข้อมูล</span>
           <textarea
             className="mt-2 min-h-24 w-full rounded-md border border-zinc-300 px-3 py-3 text-sm leading-6 outline-none placeholder:text-zinc-400 focus:border-zinc-500"
             placeholder="ระบุแหล่งข้อมูล เงื่อนไขการตีความ หรือข้อจำกัดที่ผู้ใช้งานควรรู้"
@@ -406,7 +406,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
         <section className="overflow-hidden rounded-lg border border-zinc-200">
           <div className="flex flex-col gap-3 border-b border-zinc-200 bg-zinc-50 px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-800">Embed preview</h3>
+              <h3 className="text-sm font-semibold text-zinc-800">ตัวอย่าง Embed</h3>
               <p className="mt-1 text-sm text-zinc-500">{embedAssessment.reason}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -421,7 +421,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
                 disabled={!previewUrl || isCheckingHealth}
                 onClick={checkEmbedHealth}
               >
-                {isCheckingHealth ? "Checking..." : "Check embed health"}
+                {isCheckingHealth ? "กำลังตรวจ..." : "ตรวจ Embed health"}
               </button>
             </div>
           </div>
@@ -438,7 +438,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
                   <p className="mt-1 text-sm leading-6 text-zinc-500">{healthResult.recommendation}</p>
                 </div>
                 <div className="text-sm text-zinc-500 md:text-right">
-                  <div>Checked {new Date(healthResult.checkedAt).toLocaleString()}</div>
+                  <div>ตรวจเมื่อ {new Date(healthResult.checkedAt).toLocaleString()}</div>
                   {healthResult.headers ? (
                     <>
                       <div className="mt-1">HTTP {healthResult.headers.httpStatus}</div>
@@ -481,7 +481,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Open external URL
+                  เปิด URL ภายนอก
                 </a>
               ) : null}
             </div>
@@ -495,7 +495,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             disabled={isSubmitting}
             onClick={() => handleSubmit("draft")}
           >
-            {isSubmitting ? "Saving..." : "Save draft"}
+            {isSubmitting ? "กำลังบันทึก..." : "บันทึกฉบับร่าง"}
           </button>
           <button
             type="button"
@@ -503,7 +503,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             disabled={isSubmitting}
             onClick={() => handleSubmit("review")}
           >
-            {isSubmitting ? "Saving..." : "Submit for review"}
+            {isSubmitting ? "กำลังบันทึก..." : "ส่งตรวจสอบ"}
           </button>
         </div>
       </form>

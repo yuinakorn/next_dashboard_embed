@@ -15,9 +15,9 @@ export default function ReviewPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-medium text-zinc-500">Phase 3 - Governance Workflow</p>
-            <h1 className="mt-1 text-2xl font-semibold">Review Queue</h1>
+            <h1 className="mt-1 text-2xl font-semibold">คิวตรวจสอบ</h1>
             <p className="mt-1 text-sm text-zinc-500">
-              Approve, reject, and record audit events before dashboards are published.
+              อนุมัติ ปฏิเสธ และบันทึก Audit event ก่อนเผยแพร่ Dashboard
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -25,7 +25,7 @@ export default function ReviewPage() {
               href="/audit"
               className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              Audit log
+              ประวัติ Audit
             </Link>
             <Link
               href="/catalog"
@@ -37,7 +37,7 @@ export default function ReviewPage() {
               href="/"
               className="inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800"
             >
-              Home
+              หน้าหลัก
             </Link>
           </div>
         </div>

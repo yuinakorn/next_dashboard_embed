@@ -68,13 +68,13 @@ function ReviewCard({
               <span className="font-medium text-zinc-700">Provider:</span> {dashboard.provider}
             </div>
             <div>
-              <span className="font-medium text-zinc-700">Category:</span> {dashboard.categoryName}
+              <span className="font-medium text-zinc-700">หมวดหมู่:</span> {dashboard.categoryName}
             </div>
             <div>
-              <span className="font-medium text-zinc-700">Owner:</span> {dashboard.owner}
+              <span className="font-medium text-zinc-700">เจ้าของ:</span> {dashboard.owner}
             </div>
             <div>
-              <span className="font-medium text-zinc-700">Updated:</span> {dashboard.updatedAt}
+              <span className="font-medium text-zinc-700">อัปเดต:</span> {dashboard.updatedAt}
             </div>
           </div>
         </div>
@@ -82,7 +82,7 @@ function ReviewCard({
           href={`/dashboards/${dashboard.id}`}
           className="inline-flex h-10 w-fit items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
         >
-          Preview
+          ดูตัวอย่าง
         </Link>
       </div>
 
@@ -91,7 +91,7 @@ function ReviewCard({
       </div>
 
       <label className="mt-4 block">
-        <span className="text-sm font-medium text-zinc-700">Review note</span>
+        <span className="text-sm font-medium text-zinc-700">หมายเหตุการตรวจสอบ</span>
         <textarea
           className="mt-2 min-h-24 w-full rounded-md border border-zinc-300 bg-white px-3 py-3 text-sm leading-6 outline-none placeholder:text-zinc-400 focus:border-zinc-500"
           placeholder="ระบุเหตุผลการอนุมัติ หรือสิ่งที่ต้องแก้ไขก่อนเผยแพร่"
@@ -107,7 +107,7 @@ function ReviewCard({
           disabled={!canPublish}
           onClick={() => onDecision(dashboard, "reject", note)}
         >
-          Reject
+          ปฏิเสธ
         </button>
         <button
           type="button"
@@ -115,12 +115,12 @@ function ReviewCard({
           disabled={!canPublish}
           onClick={() => onDecision(dashboard, "approve", note)}
         >
-          Approve and publish
+          อนุมัติและเผยแพร่
         </button>
       </div>
       {!canPublish ? (
         <p className="mt-3 text-right text-sm text-zinc-500">
-          Current mock user can view this item but does not have publish permission for this category.
+          ผู้ใช้จำลองปัจจุบันมองเห็นรายการนี้ได้ แต่ไม่มีสิทธิ์เผยแพร่ในหมวดหมู่นี้
         </p>
       ) : null}
     </article>
@@ -180,11 +180,11 @@ export function ReviewQueue({
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-sm font-medium text-zinc-500">Pending review</p>
+          <p className="text-sm font-medium text-zinc-500">รอตรวจสอบ</p>
           <strong className="mt-2 block text-3xl font-semibold">{pendingDashboards.length}</strong>
         </div>
         <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-sm font-medium text-zinc-500">Resolved in session</p>
+          <p className="text-sm font-medium text-zinc-500">ดำเนินการในรอบนี้</p>
           <strong className="mt-2 block text-3xl font-semibold">{resolvedDashboards.length}</strong>
         </div>
         <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
@@ -195,9 +195,9 @@ export function ReviewQueue({
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-950">Review Queue</h2>
+          <h2 className="text-xl font-semibold text-zinc-950">คิวตรวจสอบ</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Mock workflow for approve/reject before dashboards become published.
+            Workflow จำลองสำหรับอนุมัติหรือปฏิเสธก่อนเผยแพร่ Dashboard
           </p>
         </div>
         {pendingDashboards.length ? (
@@ -211,16 +211,16 @@ export function ReviewQueue({
           ))
         ) : (
           <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-500">
-            No dashboards are waiting for review.
+            ไม่มี Dashboard ที่รอตรวจสอบ
           </div>
         )}
       </section>
 
       <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-200 px-4 py-4">
-          <h2 className="text-lg font-semibold">Session Audit Trail</h2>
+          <h2 className="text-lg font-semibold">Audit Trail ในรอบนี้</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            These events are held in client state only. A later database layer should persist them.
+            รายการนี้เก็บใน client state เท่านั้น ระยะต่อไปควรบันทึกลงฐานข้อมูล
           </p>
         </div>
         {auditEvents.length ? (
@@ -240,7 +240,7 @@ export function ReviewQueue({
             ))}
           </div>
         ) : (
-          <div className="px-4 py-8 text-center text-sm text-zinc-500">No audit events in this session.</div>
+          <div className="px-4 py-8 text-center text-sm text-zinc-500">ยังไม่มี Audit event ในรอบนี้</div>
         )}
       </section>
     </div>

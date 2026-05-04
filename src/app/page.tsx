@@ -230,17 +230,17 @@ export default function Home() {
           </div>
           <nav className="mt-8 space-y-1 text-sm font-medium">
             {[
-              { label: "Home", href: "/" },
+              { label: "หน้าหลัก", href: "/" },
               { label: "Catalog", href: "/catalog" },
-              { label: "Categories", href: "#" },
-              { label: "Review queue", href: "/review" },
-              { label: "Audit log", href: "/audit" },
+              { label: "หมวดหมู่", href: "#" },
+              { label: "คิวตรวจสอบ", href: "/review" },
+              { label: "ประวัติ Audit", href: "/audit" },
             ].map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
                 className={`block rounded-md px-3 py-2 ${
-                  item.label === "Home"
+                  item.href === "/"
                     ? "bg-zinc-950 text-white"
                     : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
                 }`}
@@ -251,7 +251,7 @@ export default function Home() {
           </nav>
           <div className="mt-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-zinc-900">Category tree</h2>
+              <h2 className="text-sm font-semibold text-zinc-900">โครงสร้างหมวดหมู่</h2>
               <button className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700">
                 Add
               </button>
@@ -268,7 +268,7 @@ export default function Home() {
           <header className="border-b border-zinc-200 bg-white">
             <div className="flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-center lg:justify-between lg:px-8">
               <div>
-                <p className="text-sm font-medium text-zinc-500">Mock SSO session</p>
+                <p className="text-sm font-medium text-zinc-500">ผู้ใช้จำลองจาก SSO</p>
                 <h2 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950">
                   {mockCurrentUser.name}
                 </h2>
@@ -292,50 +292,50 @@ export default function Home() {
           <div className="space-y-8 px-5 py-6 lg:px-8">
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <MetricCard
-                label="Published dashboards"
+                label="Dashboard ที่เผยแพร่"
                 value={String(publishedCount)}
-                detail="recently visible"
+                detail="เห็นได้ล่าสุด"
                 href="/catalog"
               />
               <MetricCard
-                label="Pending review"
+                label="รอตรวจสอบ"
                 value={String(pendingReviewDashboards.length)}
-                detail="needs governance"
+                detail="ต้องดำเนินการ"
                 href="/review"
               />
               <MetricCard
-                label="Pinned by admin"
+                label="ปักหมุดโดย Admin"
                 value={String(pinnedDashboards.length)}
-                detail="front page"
+                detail="หน้าแรก"
                 href="/catalog"
               />
               <MetricCard
-                label="External-only"
+                label="เปิดภายนอกเท่านั้น"
                 value={String(externalOnlyDashboards.length)}
-                detail="fallback needed"
+                detail="ต้องใช้ fallback"
                 href="/catalog"
               />
             </section>
 
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <QuickAction
-                title="Open Catalog"
-                description="Browse all visible dashboards with status, sensitivity, and embed health."
+                title="เปิด Catalog"
+                description="ดู Dashboard ทั้งหมด พร้อมสถานะ ความอ่อนไหว และ Embed health"
                 href="/catalog"
               />
               <QuickAction
-                title="Review Queue"
-                description="Approve or reject dashboards waiting for governance review."
+                title="คิวตรวจสอบ"
+                description="อนุมัติหรือปฏิเสธ Dashboard ที่รอการตรวจสอบ"
                 href="/review"
               />
               <QuickAction
-                title="Audit Log"
-                description="Inspect activity history for dashboard and category changes."
+                title="ประวัติ Audit"
+                description="ตรวจสอบประวัติการเปลี่ยนแปลง Dashboard และหมวดหมู่"
                 href="/audit"
               />
               <QuickAction
-                title="Create Dashboard"
-                description="Add metadata, provider URL, fallback URL, tags, and embed health check."
+                title="สร้าง Dashboard"
+                description="เพิ่ม metadata, Provider URL, fallback URL, tag และตรวจ Embed health"
                 href="/dashboards/new"
               />
             </section>
@@ -343,14 +343,14 @@ export default function Home() {
             <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
               <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
                 <label className="block">
-                  <span className="sr-only">Search dashboards</span>
+                  <span className="sr-only">ค้นหา Dashboard</span>
                   <input
                     className="h-11 w-full rounded-md border border-zinc-300 px-3 text-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-500"
-                    placeholder="Search by dashboard name, tag, owner, provider..."
+                    placeholder="ค้นหาด้วยชื่อ Dashboard, tag, เจ้าของ, provider..."
                   />
                 </label>
                 <select className="h-11 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500">
-                  <option>All providers</option>
+                  <option>ทุก Provider</option>
                   <option>Looker Studio</option>
                   <option>Superset</option>
                   <option>Grafana</option>
@@ -359,26 +359,26 @@ export default function Home() {
                   href="/dashboards/new"
                   className="inline-flex h-11 items-center justify-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
                 >
-                  New dashboard
+                  สร้าง Dashboard
                 </Link>
               </div>
             </section>
 
             <DashboardSection
-              title="Pinned By Leadership"
+              title="ปักหมุดโดยผู้บริหาร"
               description="Dashboard สำคัญที่ถูกดันขึ้นหน้าแรกโดย admin หรือผู้บริหาร"
               dashboards={pinnedDashboards}
             />
 
             <div className="grid gap-8 xl:grid-cols-2">
               <DashboardSection
-                title="Pending Review"
+                title="รอตรวจสอบ"
                 description="รายการที่รอ approve/reject ก่อนเผยแพร่"
                 dashboards={pendingReviewDashboards}
                 compact
               />
               <DashboardSection
-                title="Recently Published"
+                title="เผยแพร่ล่าสุด"
                 description="dashboard published ล่าสุดที่ผู้ใช้มองเห็นได้"
                 dashboards={recentlyPublishedDashboards}
                 compact
@@ -387,13 +387,13 @@ export default function Home() {
 
             <div className="grid gap-8 xl:grid-cols-2">
               <DashboardSection
-                title="Embed Attention"
-                description="dashboard ที่ควรใช้ fallback เพราะ iframe อาจถูก block"
+                title="ควรตรวจ Embed"
+                description="Dashboard ที่ควรใช้ fallback เพราะ iframe อาจถูกบล็อก"
                 dashboards={externalOnlyDashboards}
                 compact
               />
               <DashboardSection
-                title="Popular"
+                title="ยอดนิยม"
                 description="เรียงจากจำนวนการเปิดดูใน portal"
                 dashboards={popularDashboards}
                 compact
@@ -402,13 +402,13 @@ export default function Home() {
 
             <div className="grid gap-8 xl:grid-cols-2">
               <DashboardSection
-                title="My Team"
+                title="ทีมของฉัน"
                 description="dashboard ที่ทีมของผู้ใช้ mock SSO เป็นเจ้าของ"
                 dashboards={myTeamDashboards}
                 compact
               />
               <DashboardSection
-                title="Favorites"
+                title="รายการโปรด"
                 description="รายการที่ผู้ใช้ติดดาวไว้เพื่อกลับมาเปิดเร็ว"
                 dashboards={favoriteDashboards}
                 compact

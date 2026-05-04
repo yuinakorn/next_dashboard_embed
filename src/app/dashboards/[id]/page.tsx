@@ -25,7 +25,7 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-medium text-zinc-500">
-              {dashboard.provider} embed preview
+              ตัวอย่าง Embed จาก {dashboard.provider}
             </p>
             <h1 className="mt-1 truncate text-2xl font-semibold">{dashboard.title}</h1>
             <p className="mt-1 text-sm text-zinc-500">{dashboard.categoryName}</p>
@@ -43,13 +43,13 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
               target="_blank"
               rel="noreferrer"
             >
-              Open fallback
+              เปิด fallback
             </a>
             <Link
               href="/"
               className="inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800"
             >
-              Home
+              หน้าหลัก
             </Link>
           </div>
         </div>
@@ -80,14 +80,14 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
           </div>
           <div className="text-sm text-zinc-500 lg:text-right">
             <div>{dashboard.owner}</div>
-            <div className="mt-1">Updated {dashboard.updatedAt}</div>
+            <div className="mt-1">อัปเดต {dashboard.updatedAt}</div>
           </div>
         </section>
 
         <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
           <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-zinc-900">Embedded dashboard</h2>
+              <h2 className="text-sm font-semibold text-zinc-900">Dashboard แบบ Embed</h2>
               <p className="mt-1 text-sm text-zinc-500">{dashboard.embedStatusReason}</p>
             </div>
             <a
@@ -102,8 +102,8 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
           {dashboard.embedStatus === "external_only" || dashboard.embedStatus === "blocked" ? (
             <div className="flex h-[48vh] flex-col items-center justify-center px-5 text-center">
               <p className="max-w-xl text-sm leading-6 text-zinc-600">
-                This dashboard is marked as external-only. The provider may block iframe using
-                X-Frame-Options, CSP frame-ancestors, Cloudflare, or authentication rules.
+                Dashboard นี้ถูกระบุเป็น external-only เพราะ Provider อาจบล็อก iframe ด้วย
+                X-Frame-Options, CSP frame-ancestors, Cloudflare หรือกติกาการยืนยันตัวตน
               </p>
               <a
                 href={dashboard.externalUrl}
@@ -111,7 +111,7 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
                 target="_blank"
                 rel="noreferrer"
               >
-                Open external dashboard
+                เปิด Dashboard ภายนอก
               </a>
             </div>
           ) : (

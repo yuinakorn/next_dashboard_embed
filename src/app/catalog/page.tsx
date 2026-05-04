@@ -74,19 +74,19 @@ function CatalogRow({ dashboard }: { dashboard: Dashboard }) {
             href={`/dashboards/${dashboard.id}`}
             className="inline-flex h-9 items-center rounded-md border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
           >
-            Open
+            เปิด
           </Link>
           <button
             className="inline-flex h-9 items-center rounded-md border border-zinc-300 px-3 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={!canUpdate}
           >
-            Edit
+            แก้ไข
           </button>
           <button
             className="inline-flex h-9 items-center rounded-md bg-zinc-950 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
             disabled={!canPublish}
           >
-            Publish
+            เผยแพร่
           </button>
         </div>
       </td>
@@ -106,33 +106,33 @@ export default async function CatalogPage() {
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm font-medium text-zinc-500">Internal Portal</p>
-            <h1 className="mt-1 text-2xl font-semibold">Dashboard Catalog</h1>
+            <p className="text-sm font-medium text-zinc-500">ระบบภายใน</p>
+            <h1 className="mt-1 text-2xl font-semibold">คลัง Dashboard</h1>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/"
               className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              Home
+              หน้าหลัก
             </Link>
             <Link
               href="/review"
               className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              Review queue
+              คิวตรวจสอบ
             </Link>
             <Link
               href="/audit"
               className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              Audit log
+              ประวัติ Audit
             </Link>
             <Link
               href="/dashboards/new"
               className="inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800"
             >
-              New dashboard
+              สร้าง Dashboard
             </Link>
           </div>
         </div>
@@ -141,15 +141,15 @@ export default async function CatalogPage() {
       <div className="mx-auto max-w-7xl space-y-6 px-5 py-6">
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Visible dashboards</p>
+            <p className="text-sm font-medium text-zinc-500">Dashboard ที่มองเห็นได้</p>
             <strong className="mt-2 block text-3xl font-semibold">{visibleDashboards.length}</strong>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Team review queue</p>
+            <p className="text-sm font-medium text-zinc-500">คิวตรวจสอบของทีม</p>
             <strong className="mt-2 block text-3xl font-semibold">{reviewCount}</strong>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Current permissions</p>
+            <p className="text-sm font-medium text-zinc-500">สิทธิ์ของผู้ใช้ปัจจุบัน</p>
             <strong className="mt-2 block text-3xl font-semibold">{permissions.length}</strong>
           </div>
         </section>
@@ -158,31 +158,31 @@ export default async function CatalogPage() {
           <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px_140px]">
             <input
               className="h-11 rounded-md border border-zinc-300 px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-zinc-500"
-              placeholder="Search title, owner, tag, category..."
+              placeholder="ค้นหาด้วยชื่อ เจ้าของ tag หรือหมวดหมู่..."
             />
             <select className="h-11 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500">
-              <option>All statuses</option>
-              <option>Published</option>
-              <option>In review</option>
-              <option>Draft</option>
+              <option>ทุกสถานะ</option>
+              <option>เผยแพร่แล้ว</option>
+              <option>รอตรวจสอบ</option>
+              <option>ฉบับร่าง</option>
             </select>
             <select className="h-11 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500">
-              <option>All sensitivity</option>
+              <option>ทุกระดับข้อมูล</option>
               <option>Public</option>
               <option>Internal</option>
               <option>Confidential</option>
             </select>
             <button className="h-11 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">
-              Filter
+              กรอง
             </button>
           </div>
         </section>
 
         <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
           <div className="border-b border-zinc-200 px-4 py-4">
-            <h2 className="text-lg font-semibold">Catalog Items</h2>
+            <h2 className="text-lg font-semibold">รายการ Dashboard</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Action buttons are enabled or disabled by the current mock SSO permissions.
+              ปุ่มดำเนินการจะเปิดหรือปิดตามสิทธิ์ของผู้ใช้จาก SSO จำลอง
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -190,10 +190,10 @@ export default async function CatalogPage() {
               <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Dashboard</th>
-                  <th className="px-4 py-3 font-semibold">Provider / Category</th>
-                  <th className="px-4 py-3 font-semibold">Governance</th>
-                  <th className="px-4 py-3 font-semibold">Owner</th>
-                  <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                  <th className="px-4 py-3 font-semibold">Provider / หมวดหมู่</th>
+                  <th className="px-4 py-3 font-semibold">สถานะกำกับดูแล</th>
+                  <th className="px-4 py-3 font-semibold">เจ้าของ</th>
+                  <th className="px-4 py-3 text-right font-semibold">การทำงาน</th>
                 </tr>
               </thead>
               <tbody>

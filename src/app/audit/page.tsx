@@ -54,9 +54,9 @@ export default function AuditPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-medium text-zinc-500">Phase 3 - Governance Workflow</p>
-            <h1 className="mt-1 text-2xl font-semibold">Audit Log</h1>
+            <h1 className="mt-1 text-2xl font-semibold">ประวัติ Audit</h1>
             <p className="mt-1 text-sm text-zinc-500">
-              Mock audit trail for dashboard, category, and permission activity.
+              ประวัติกิจกรรมจำลองของ Dashboard, หมวดหมู่ และสิทธิ์การใช้งาน
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -64,7 +64,7 @@ export default function AuditPage() {
               href="/review"
               className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              Review queue
+              คิวตรวจสอบ
             </Link>
             <Link
               href="/catalog"
@@ -76,7 +76,7 @@ export default function AuditPage() {
               href="/"
               className="inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800"
             >
-              Home
+              หน้าหลัก
             </Link>
           </div>
         </div>
@@ -85,21 +85,21 @@ export default function AuditPage() {
       <div className="mx-auto max-w-7xl space-y-6 px-5 py-6">
         {!canReadAudit ? (
           <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            Current mock user does not have `audit:read`. This page is visible for design review only.
+            ผู้ใช้จำลองปัจจุบันไม่มีสิทธิ์ `audit:read` หน้านี้แสดงไว้เพื่อดูรูปแบบเท่านั้น
           </section>
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Total events</p>
+            <p className="text-sm font-medium text-zinc-500">Events ทั้งหมด</p>
             <strong className="mt-2 block text-3xl font-semibold">{mockAuditEvents.length}</strong>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Dashboard events</p>
+            <p className="text-sm font-medium text-zinc-500">Events ของ Dashboard</p>
             <strong className="mt-2 block text-3xl font-semibold">{dashboardEvents}</strong>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Category events</p>
+            <p className="text-sm font-medium text-zinc-500">Events ของหมวดหมู่</p>
             <strong className="mt-2 block text-3xl font-semibold">{categoryEvents}</strong>
           </div>
         </section>
@@ -108,23 +108,23 @@ export default function AuditPage() {
           <div className="grid gap-3 md:grid-cols-[1fr_200px_200px_140px]">
             <input
               className="h-11 rounded-md border border-zinc-300 px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-zinc-500"
-              placeholder="Search actor, dashboard, note..."
+              placeholder="ค้นหาด้วยผู้ทำรายการ Dashboard หรือหมายเหตุ..."
             />
             <select className="h-11 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500">
-              <option>All actions</option>
+              <option>ทุก action</option>
               <option>dashboard.publish</option>
               <option>dashboard.submit_review</option>
               <option>dashboard.update_embed_url</option>
               <option>category.create_child</option>
             </select>
             <select className="h-11 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500">
-              <option>All entity types</option>
+              <option>ทุกประเภทข้อมูล</option>
               <option>dashboard</option>
               <option>category</option>
               <option>permission</option>
             </select>
             <button className="h-11 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">
-              Filter
+              กรอง
             </button>
           </div>
         </section>
@@ -133,7 +133,7 @@ export default function AuditPage() {
           <div className="border-b border-zinc-200 px-4 py-4">
             <h2 className="text-lg font-semibold">Audit Events</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              This is a mock read model. The real implementation should read from `portal_audit_logs`.
+              หน้านี้เป็น read model จำลอง ระยะใช้งานจริงควรอ่านจาก `portal_audit_logs`
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -141,9 +141,9 @@ export default function AuditPage() {
               <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Action</th>
-                  <th className="px-4 py-3 font-semibold">Entity / Note</th>
-                  <th className="px-4 py-3 font-semibold">Actor</th>
-                  <th className="px-4 py-3 text-right font-semibold">Created</th>
+                  <th className="px-4 py-3 font-semibold">ข้อมูล / หมายเหตุ</th>
+                  <th className="px-4 py-3 font-semibold">ผู้ทำรายการ</th>
+                  <th className="px-4 py-3 text-right font-semibold">เวลา</th>
                 </tr>
               </thead>
               <tbody>

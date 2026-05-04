@@ -91,15 +91,15 @@ export default function PublicHome() {
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
               <strong className="block text-3xl font-semibold">{publicDashboards.length}</strong>
-              <span className="mt-1 block text-sm text-zinc-500">public dashboards</span>
+              <span className="mt-1 block text-sm text-zinc-500">Dashboard สาธารณะ</span>
             </div>
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
               <strong className="block text-3xl font-semibold">{publicPinnedDashboards.length}</strong>
-              <span className="mt-1 block text-sm text-zinc-500">recommended</span>
+              <span className="mt-1 block text-sm text-zinc-500">รายการแนะนำ</span>
             </div>
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
               <strong className="block text-3xl font-semibold">0</strong>
-              <span className="mt-1 block text-sm text-zinc-500">login required</span>
+              <span className="mt-1 block text-sm text-zinc-500">ต้องเข้าสู่ระบบ</span>
             </div>
           </div>
         </div>
