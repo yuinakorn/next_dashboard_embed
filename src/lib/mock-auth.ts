@@ -2,7 +2,7 @@ import type { MockJwtPayload, PortalUser } from "@/lib/portal-types";
 
 export const mockJwtPayload: MockJwtPayload = {
   sub: "u-001",
-  name: "นคร มงคลโชติญาดา",
+  name: "แอดมิน Yui",
   title: "Project Manager",
   department: "Digital Health Strategy",
   team_id: "team-digital-health",
