@@ -95,7 +95,7 @@ export function canUpdateDashboard(user: PortalUser, dashboard: Dashboard): bool
     return true;
   }
 
-  return hasPermission(user, "dashboard:update_own") && dashboard.ownerTeamId === user.teamId;
+  return hasPermission(user, "dashboard:update_own") && dashboard.ownerUserId === user.id;
 }
 
 export function canPublishDashboard(user: PortalUser, dashboard: Dashboard): boolean {

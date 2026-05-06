@@ -1,15 +1,7 @@
-import {
-  externalOnlyDashboards,
-  favoriteDashboards,
-  mockCategories,
-  mockCurrentUser,
-  myTeamDashboards,
-  pendingReviewDashboards,
-  pinnedDashboards,
-  popularDashboards,
-  recentlyPublishedDashboards,
-  visibleDashboards,
-} from "@/lib/mock-portal-data";
+import { buttonStyles, fieldStyles, focusRing } from "@/components/dashboard-ui";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { listCategories } from "@/lib/db/categories";
+import { listDashboards } from "@/lib/db/dashboards";
 import type {
   Category,
   Dashboard,
@@ -76,8 +68,8 @@ const embedLabels: Record<EmbedStatus, string> = {
 
 const navItems = [
   { label: "หน้าหลัก", href: "/", count: null },
-  { label: "Catalog", href: "/catalog", count: visibleDashboards.length },
-  { label: "คิวตรวจสอบ", href: "/review", count: pendingReviewDashboards.length },
+  { label: "Catalog", href: "/catalog", count: null },
+  { label: "คิวตรวจสอบ", href: "/review", count: null },
   { label: "ประวัติ Audit", href: "/audit", count: null },
   { label: "สร้าง Dashboard", href: "/dashboards/new", count: null },
 ];
@@ -182,13 +174,13 @@ function FeaturedDashboard({ dashboard }: { dashboard: Dashboard }) {
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <Link
           href={`/dashboards/${dashboard.id}`}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-slate-50 transition duration-200 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+          className={`${buttonStyles.primary} h-10 justify-center`}
         >
           Open dashboard
         </Link>
         <a
           href={dashboard.externalUrl}
-          className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-200 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+          className={`${buttonStyles.secondary} h-10 justify-center`}
           target="_blank"
           rel="noreferrer"
         >
@@ -217,7 +209,7 @@ function QueueRow({ dashboard }: { dashboard: Dashboard }) {
           <span className="text-slate-500">{dashboard.updatedAt}</span>
           <Link
             href={`/dashboards/${dashboard.id}`}
-            className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-slate-50 px-3 font-semibold text-slate-700 transition duration-200 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+            className={`${buttonStyles.secondary} h-9 px-3`}
           >
             Review
           </Link>
@@ -264,7 +256,7 @@ function CompactDashboardList({
               </div>
               <Link
                 href={`/dashboards/${dashboard.id}`}
-                className="shrink-0 rounded-md px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition duration-200 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+                className={`shrink-0 rounded-md px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition duration-200 hover:bg-slate-100 ${focusRing}`}
               >
                 {actionLabel}
               </Link>
@@ -309,7 +301,31 @@ function RiskPanel({ dashboards }: { dashboards: Dashboard[] }) {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const currentUser = await getCurrentUser();
+  const [categories, dashboards] = await Promise.all([
+    listCategories(),
+    listDashboards(currentUser.id),
+  ]);
+  const pinnedDashboards = dashboards.filter((dashboard) => dashboard.isPinned);
+  const pendingReviewDashboards = dashboards.filter((dashboard) => dashboard.status === "in_review");
+  const externalOnlyDashboards = dashboards.filter(
+    (dashboard) => dashboard.embedStatus === "external_only" || dashboard.embedStatus === "blocked",
+  );
+  const recentlyPublishedDashboards = [...dashboards]
+    .filter((dashboard) => dashboard.status === "published")
+    .sort(
+      (first, second) =>
+        new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime(),
+    )
+    .slice(0, 4);
+  const popularDashboards = [...dashboards]
+    .sort((first, second) => second.views - first.views)
+    .slice(0, 4);
+  const myTeamDashboards = dashboards.filter(
+    (dashboard) => dashboard.ownerTeamId === currentUser.teamId,
+  );
+  const favoriteDashboards = dashboards.filter((dashboard) => dashboard.isFavorite);
   const publishedCount = recentlyPublishedDashboards.length;
   const mainPinnedDashboard = pinnedDashboards[0] ?? recentlyPublishedDashboards[0];
   const secondaryPinnedDashboards = pinnedDashboards.slice(1);
@@ -335,7 +351,15 @@ export default function Home() {
           </div>
 
           <nav className="mt-8 space-y-1 text-sm font-semibold">
-            {navItems.map((item) => (
+            {navItems.map((item) => {
+              const count =
+                item.href === "/catalog"
+                  ? dashboards.length
+                  : item.href === "/review"
+                    ? pendingReviewDashboards.length
+                    : item.count;
+
+              return (
               <Link
                 key={item.label}
                 href={item.href}
@@ -346,17 +370,18 @@ export default function Home() {
                 }`}
               >
                 <span>{item.label}</span>
-                {item.count !== null ? (
+                {count !== null ? (
                   <span
                     className={`rounded px-2 py-0.5 text-xs ${
                       item.href === "/" ? "bg-slate-800 text-slate-100" : "bg-slate-200 text-slate-700"
                     }`}
                   >
-                    {item.count}
+                    {count}
                   </span>
                 ) : null}
               </Link>
-            ))}
+              );
+            })}
           </nav>
 
           <section className="mt-8">
@@ -370,7 +395,7 @@ export default function Home() {
               </Link>
             </div>
             <ul className="mt-3 space-y-2">
-              {mockCategories.map((category) => (
+              {categories.map((category) => (
                 <CategoryNode key={category.id} category={category} />
               ))}
             </ul>
@@ -384,14 +409,14 @@ export default function Home() {
                 <div className="max-w-3xl">
                   <p className="text-sm font-semibold text-slate-500">ผู้ใช้จำลองจาก SSO</p>
                   <h2 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
-                    {mockCurrentUser.name}
+                    {currentUser.name}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {mockCurrentUser.title} · {mockCurrentUser.department}
+                    {currentUser.title} · {currentUser.department}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {mockCurrentUser.roles.map((role) => (
+                  {currentUser.roles.map((role) => (
                     <span
                       key={role}
                       className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700"
@@ -441,17 +466,17 @@ export default function Home() {
                 <label className="block">
                   <span className="sr-only">ค้นหา Dashboard</span>
                   <input
-                    className="h-11 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm outline-none transition duration-200 placeholder:text-slate-400 focus:border-sky-700 focus:ring-2 focus:ring-sky-100"
+                    className={`${fieldStyles} h-11 w-full`}
                     placeholder="ค้นหาด้วยชื่อ Dashboard, tag, เจ้าของ, provider..."
                   />
                 </label>
-                <select className="h-11 rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition duration-200 focus:border-sky-700 focus:ring-2 focus:ring-sky-100">
+                <select className={`${fieldStyles} h-11 text-slate-700`}>
                   <option>ทุก Provider</option>
                   <option>Looker Studio</option>
                   <option>Superset</option>
                   <option>Grafana</option>
                 </select>
-                <select className="h-11 rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition duration-200 focus:border-sky-700 focus:ring-2 focus:ring-sky-100">
+                <select className={`${fieldStyles} h-11 text-slate-700`}>
                   <option>ทุกสถานะ</option>
                   <option>Published</option>
                   <option>In review</option>
@@ -459,7 +484,7 @@ export default function Home() {
                 </select>
                 <Link
                   href="/dashboards/new"
-                  className="inline-flex h-11 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-slate-50 transition duration-200 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+                  className={`${buttonStyles.primary} h-11 justify-center`}
                 >
                   สร้าง Dashboard
                 </Link>
@@ -524,11 +549,11 @@ export default function Home() {
                 <dl className="mt-4 space-y-3 text-sm">
                   <div className="flex items-center justify-between gap-4">
                     <dt className="text-slate-500">Visible dashboards</dt>
-                    <dd className="font-semibold text-slate-900">{visibleDashboards.length}</dd>
+                    <dd className="font-semibold text-slate-900">{dashboards.length}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <dt className="text-slate-500">Categories</dt>
-                    <dd className="font-semibold text-slate-900">{mockCategories.length}</dd>
+                    <dd className="font-semibold text-slate-900">{categories.length}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <dt className="text-slate-500">Review workload</dt>

@@ -1,39 +1,47 @@
-import Link from "next/link";
-import { mockAuditEvents, mockCurrentUser } from "@/lib/mock-portal-data";
+import {
+  FilterShell,
+  MetricTile,
+  PageHeader,
+  TableShell,
+  buttonStyles,
+  fieldStyles,
+} from "@/components/dashboard-ui";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { listAuditEvents } from "@/lib/db/audit";
 import { hasPermission } from "@/lib/permissions";
 import type { AuditEvent } from "@/lib/portal-types";
 
 const actionTone: Record<string, string> = {
   "dashboard.publish": "bg-emerald-50 text-emerald-800",
   "dashboard.reject": "bg-rose-50 text-rose-800",
-  "dashboard.submit_review": "bg-amber-50 text-amber-800",
+  "dashboard.submit_review": "bg-amber-50 text-amber-900",
   "dashboard.update_embed_url": "bg-sky-50 text-sky-800",
   "category.create_child": "bg-violet-50 text-violet-800",
 };
 
 function AuditRow({ event }: { event: AuditEvent }) {
   return (
-    <tr className="border-b border-zinc-100 last:border-0">
-      <td className="min-w-52 px-4 py-4 align-top">
+    <tr className="border-b border-slate-200 last:border-0 hover:bg-slate-50">
+      <td className="min-w-56 px-4 py-4 align-top">
         <span
-          className={`rounded-md px-2 py-1 text-xs font-medium ${
-            actionTone[event.action] ?? "bg-zinc-100 text-zinc-700"
+          className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ${
+            actionTone[event.action] ?? "bg-slate-100 text-slate-700"
           }`}
         >
           {event.action}
         </span>
-        <div className="mt-2 text-sm text-zinc-500">{event.entityType}</div>
+        <div className="mt-2 text-sm text-slate-500">{event.entityType}</div>
       </td>
-      <td className="min-w-72 px-4 py-4 align-top">
-        <div className="font-medium text-zinc-950">{event.entityTitle}</div>
-        <div className="mt-1 text-sm text-zinc-500">{event.entityId}</div>
-        <p className="mt-2 text-sm leading-6 text-zinc-600">{event.note}</p>
+      <td className="min-w-80 px-4 py-4 align-top">
+        <div className="font-semibold text-slate-950">{event.entityTitle}</div>
+        <div className="mt-1 text-sm text-slate-500">{event.entityId}</div>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{event.note}</p>
       </td>
-      <td className="px-4 py-4 align-top text-sm text-zinc-600">
-        <div className="font-medium text-zinc-800">{event.actorName}</div>
+      <td className="px-4 py-4 align-top text-sm text-slate-600">
+        <div className="font-semibold text-slate-800">{event.actorName}</div>
         <div className="mt-1">{event.actorUserId}</div>
       </td>
-      <td className="px-4 py-4 align-top text-right text-sm text-zinc-500">
+      <td className="px-4 py-4 align-top text-right text-sm text-slate-500">
         {new Date(event.createdAt).toLocaleString("th-TH", {
           dateStyle: "medium",
           timeStyle: "short",
@@ -43,102 +51,73 @@ function AuditRow({ event }: { event: AuditEvent }) {
   );
 }
 
-export default function AuditPage() {
-  const canReadAudit = hasPermission(mockCurrentUser, "audit:read");
-  const dashboardEvents = mockAuditEvents.filter((event) => event.entityType === "dashboard").length;
-  const categoryEvents = mockAuditEvents.filter((event) => event.entityType === "category").length;
+export default async function AuditPage() {
+  const currentUser = await getCurrentUser();
+  const auditEvents = await listAuditEvents();
+  const canReadAudit = hasPermission(currentUser, "audit:read");
+  const dashboardEvents = auditEvents.filter((event) => event.entityType === "dashboard").length;
+  const categoryEvents = auditEvents.filter((event) => event.entityType === "category").length;
 
   return (
-    <main className="min-h-screen bg-zinc-100 text-zinc-950">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-medium text-zinc-500">Phase 3 - Governance Workflow</p>
-            <h1 className="mt-1 text-2xl font-semibold">ประวัติ Audit</h1>
-            <p className="mt-1 text-sm text-zinc-500">
-              ประวัติกิจกรรมจำลองของ Dashboard, หมวดหมู่ และสิทธิ์การใช้งาน
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/review"
-              className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              คิวตรวจสอบ
-            </Link>
-            <Link
-              href="/catalog"
-              className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              Catalog
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800"
-            >
-              หน้าหลัก
-            </Link>
-          </div>
-        </div>
-      </header>
+    <main className="min-h-screen bg-[oklch(0.968_0.006_240)] text-slate-950">
+      <PageHeader
+        eyebrow="Governance Workflow"
+        title="ประวัติ Audit"
+        description="อ่าน trace ของ Dashboard, หมวดหมู่ และสิทธิ์การใช้งาน"
+        actions={[
+          { href: "/review", label: "คิวตรวจสอบ" },
+          { href: "/catalog", label: "Catalog" },
+          { href: "/", label: "หน้าหลัก", primary: true },
+        ]}
+      />
 
       <div className="mx-auto max-w-7xl space-y-6 px-5 py-6">
         {!canReadAudit ? (
-          <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900">
             ผู้ใช้จำลองปัจจุบันไม่มีสิทธิ์ `audit:read` หน้านี้แสดงไว้เพื่อดูรูปแบบเท่านั้น
           </section>
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Events ทั้งหมด</p>
-            <strong className="mt-2 block text-3xl font-semibold">{mockAuditEvents.length}</strong>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Events ของ Dashboard</p>
-            <strong className="mt-2 block text-3xl font-semibold">{dashboardEvents}</strong>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Events ของหมวดหมู่</p>
-            <strong className="mt-2 block text-3xl font-semibold">{categoryEvents}</strong>
-          </div>
+          <MetricTile label="Events ทั้งหมด" value={auditEvents.length} tone="neutral" />
+          <MetricTile label="Events ของ Dashboard" value={dashboardEvents} tone="info" />
+          <MetricTile label="Events ของหมวดหมู่" value={categoryEvents} tone="category" />
         </section>
 
-        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+        <FilterShell>
           <div className="grid gap-3 md:grid-cols-[1fr_200px_200px_140px]">
-            <input
-              className="h-11 rounded-md border border-zinc-300 px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-zinc-500"
-              placeholder="ค้นหาด้วยผู้ทำรายการ Dashboard หรือหมายเหตุ..."
-            />
-            <select className="h-11 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500">
+            <label>
+              <span className="sr-only">ค้นหา Audit event</span>
+              <input
+                className={`${fieldStyles} h-11 w-full`}
+                placeholder="ค้นหาด้วยผู้ทำรายการ Dashboard หรือหมายเหตุ..."
+              />
+            </label>
+            <select className={`${fieldStyles} h-11 text-slate-700`}>
               <option>ทุก action</option>
               <option>dashboard.publish</option>
               <option>dashboard.submit_review</option>
               <option>dashboard.update_embed_url</option>
               <option>category.create_child</option>
             </select>
-            <select className="h-11 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500">
+            <select className={`${fieldStyles} h-11 text-slate-700`}>
               <option>ทุกประเภทข้อมูล</option>
               <option>dashboard</option>
               <option>category</option>
               <option>permission</option>
             </select>
-            <button className="h-11 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">
+            <button className={`${buttonStyles.primary} h-11 justify-center`}>
               กรอง
             </button>
           </div>
-        </section>
+        </FilterShell>
 
-        <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-200 px-4 py-4">
-            <h2 className="text-lg font-semibold">Audit Events</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              หน้านี้เป็น read model จำลอง ระยะใช้งานจริงควรอ่านจาก `portal_audit_logs`
-            </p>
-          </div>
-          <div className="overflow-x-auto">
+        <TableShell
+          title="Audit Events"
+          description="อ่านประวัติการเปลี่ยนแปลงจาก `portal_audit_logs` โดยตรง"
+        >
             <table className="w-full border-collapse text-left">
-              <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
+              <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Action</th>
                   <th className="px-4 py-3 font-semibold">ข้อมูล / หมายเหตุ</th>
@@ -147,13 +126,12 @@ export default function AuditPage() {
                 </tr>
               </thead>
               <tbody>
-                {mockAuditEvents.map((event) => (
+                {auditEvents.map((event) => (
                   <AuditRow key={event.id} event={event} />
                 ))}
               </tbody>
             </table>
-          </div>
-        </section>
+        </TableShell>
       </div>
     </main>
   );

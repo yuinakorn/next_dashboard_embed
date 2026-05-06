@@ -1,22 +1,31 @@
 import Link from "next/link";
+import {
+  Badge,
+  FilterShell,
+  MetricTile,
+  PageHeader,
+  TableShell,
+  buttonStyles,
+  fieldStyles,
+} from "@/components/dashboard-ui";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { listDashboards } from "@/lib/db/dashboards";
 import { getEmbedStatusTone } from "@/lib/embed-policy";
-import { mockCurrentUser } from "@/lib/mock-portal-data";
 import {
   canPublishDashboard,
   canUpdateDashboard,
   getUserPermissions,
 } from "@/lib/permissions";
-import type { Dashboard, DashboardStatus, SensitivityLevel } from "@/lib/portal-types";
+import type { Dashboard, DashboardStatus, PortalUser, SensitivityLevel } from "@/lib/portal-types";
 
 export const dynamic = "force-dynamic";
 
 const statusTone: Record<DashboardStatus, string> = {
-  draft: "bg-zinc-100 text-zinc-700",
-  in_review: "bg-amber-50 text-amber-800",
+  draft: "bg-slate-100 text-slate-700",
+  in_review: "bg-amber-50 text-amber-900",
   published: "bg-emerald-50 text-emerald-800",
   rejected: "bg-rose-50 text-rose-800",
-  archived: "bg-zinc-200 text-zinc-600",
+  archived: "bg-slate-200 text-slate-600",
 };
 
 const sensitivityTone: Record<SensitivityLevel, string> = {
@@ -26,64 +35,58 @@ const sensitivityTone: Record<SensitivityLevel, string> = {
   restricted: "bg-rose-50 text-rose-800",
 };
 
-function CatalogRow({ dashboard }: { dashboard: Dashboard }) {
-  const canUpdate = canUpdateDashboard(mockCurrentUser, dashboard);
-  const canPublish = canPublishDashboard(mockCurrentUser, dashboard);
+function CatalogRow({ currentUser, dashboard }: { currentUser: PortalUser; dashboard: Dashboard }) {
+  const canUpdate = canUpdateDashboard(currentUser, dashboard);
+  const canPublish = canPublishDashboard(currentUser, dashboard);
 
   return (
-    <tr className="border-b border-zinc-100 last:border-0">
-      <td className="min-w-72 px-4 py-4 align-top">
-        <div className="font-medium text-zinc-950">{dashboard.title}</div>
-        <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-500">{dashboard.description}</p>
+    <tr className="border-b border-slate-200 last:border-0 hover:bg-slate-50">
+      <td className="min-w-80 px-4 py-4 align-top">
+        <div className="font-semibold text-slate-950">{dashboard.title}</div>
+        <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-500">{dashboard.description}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {dashboard.tags.map((tag) => (
-            <span key={tag} className="rounded-md bg-zinc-100 px-2 py-1 text-xs text-zinc-600">
+            <span key={tag} className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
               {tag}
             </span>
           ))}
         </div>
       </td>
-      <td className="px-4 py-4 align-top text-sm text-zinc-600">
-        <div className="font-medium text-zinc-800">{dashboard.provider}</div>
-        <div className="mt-1">{dashboard.categoryName}</div>
+      <td className="px-4 py-4 align-top text-sm text-slate-600">
+        <div className="font-semibold text-slate-800">{dashboard.provider}</div>
+        <div className="mt-1 max-w-56">{dashboard.categoryName}</div>
       </td>
       <td className="px-4 py-4 align-top">
         <div className="flex flex-col gap-2">
-          <span className={`w-fit rounded-md px-2 py-1 text-xs font-medium ${statusTone[dashboard.status]}`}>
-            {dashboard.status}
-          </span>
+          <Badge className={statusTone[dashboard.status]}>{dashboard.status}</Badge>
+          <Badge className={sensitivityTone[dashboard.sensitivity]}>{dashboard.sensitivity}</Badge>
           <span
-            className={`w-fit rounded-md px-2 py-1 text-xs font-medium ${sensitivityTone[dashboard.sensitivity]}`}
-          >
-            {dashboard.sensitivity}
-          </span>
-          <span
-            className={`w-fit rounded-md border px-2 py-1 text-xs font-medium ${getEmbedStatusTone(dashboard.embedStatus)}`}
+            className={`inline-flex w-fit rounded-md border px-2 py-1 text-xs font-semibold ${getEmbedStatusTone(dashboard.embedStatus)}`}
           >
             {dashboard.embedStatus}
           </span>
         </div>
       </td>
-      <td className="px-4 py-4 align-top text-sm text-zinc-600">
-        <div className="font-medium text-zinc-800">{dashboard.owner}</div>
+      <td className="px-4 py-4 align-top text-sm text-slate-600">
+        <div className="font-semibold text-slate-800">{dashboard.owner}</div>
         <div className="mt-1">{dashboard.updatedAt}</div>
       </td>
       <td className="px-4 py-4 align-top text-right">
         <div className="flex justify-end gap-2">
           <Link
             href={`/dashboards/${dashboard.id}`}
-            className="inline-flex h-9 items-center rounded-md border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            className={`${buttonStyles.secondary} h-9 px-3`}
           >
             เปิด
           </Link>
           <button
-            className="inline-flex h-9 items-center rounded-md border border-zinc-300 px-3 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className={`${buttonStyles.secondary} h-9 px-3`}
             disabled={!canUpdate}
           >
             แก้ไข
           </button>
           <button
-            className="inline-flex h-9 items-center rounded-md bg-zinc-950 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className={`${buttonStyles.primary} h-9 px-3`}
             disabled={!canPublish}
           >
             เผยแพร่
@@ -95,99 +98,67 @@ function CatalogRow({ dashboard }: { dashboard: Dashboard }) {
 }
 
 export default async function CatalogPage() {
-  const visibleDashboards = await listDashboards(mockCurrentUser.id);
-  const permissions = getUserPermissions(mockCurrentUser);
+  const currentUser = await getCurrentUser();
+  const visibleDashboards = await listDashboards(currentUser.id);
+  const permissions = getUserPermissions(currentUser);
   const reviewCount = visibleDashboards.filter(
-    (dashboard) => dashboard.status === "in_review" && dashboard.ownerTeamId === mockCurrentUser.teamId,
+    (dashboard) => dashboard.status === "in_review" && dashboard.ownerTeamId === currentUser.teamId,
   ).length;
 
   return (
-    <main className="min-h-screen bg-zinc-100 text-zinc-950">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-medium text-zinc-500">ระบบภายใน</p>
-            <h1 className="mt-1 text-2xl font-semibold">คลัง Dashboard</h1>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/"
-              className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              หน้าหลัก
-            </Link>
-            <Link
-              href="/review"
-              className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              คิวตรวจสอบ
-            </Link>
-            <Link
-              href="/audit"
-              className="inline-flex h-10 items-center rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              ประวัติ Audit
-            </Link>
-            <Link
-              href="/dashboards/new"
-              className="inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800"
-            >
-              สร้าง Dashboard
-            </Link>
-          </div>
-        </div>
-      </header>
+    <main className="min-h-screen bg-[oklch(0.968_0.006_240)] text-slate-950">
+      <PageHeader
+        eyebrow="ระบบภายใน"
+        title="คลัง Dashboard"
+        description="ค้นหา จัดการสถานะ และตรวจสิทธิ์การทำงานจาก SSO จำลอง"
+        actions={[
+          { href: "/", label: "หน้าหลัก" },
+          { href: "/review", label: "คิวตรวจสอบ" },
+          { href: "/audit", label: "ประวัติ Audit" },
+          { href: "/dashboards/new", label: "สร้าง Dashboard", primary: true },
+        ]}
+      />
 
       <div className="mx-auto max-w-7xl space-y-6 px-5 py-6">
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">Dashboard ที่มองเห็นได้</p>
-            <strong className="mt-2 block text-3xl font-semibold">{visibleDashboards.length}</strong>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">คิวตรวจสอบของทีม</p>
-            <strong className="mt-2 block text-3xl font-semibold">{reviewCount}</strong>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-500">สิทธิ์ของผู้ใช้ปัจจุบัน</p>
-            <strong className="mt-2 block text-3xl font-semibold">{permissions.length}</strong>
-          </div>
+          <MetricTile label="Dashboard ที่มองเห็นได้" value={visibleDashboards.length} tone="info" />
+          <MetricTile label="คิวตรวจสอบของทีม" value={reviewCount} tone="review" />
+          <MetricTile label="สิทธิ์ของผู้ใช้ปัจจุบัน" value={permissions.length} tone="neutral" />
         </section>
 
-        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+        <FilterShell>
           <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px_140px]">
-            <input
-              className="h-11 rounded-md border border-zinc-300 px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-zinc-500"
-              placeholder="ค้นหาด้วยชื่อ เจ้าของ tag หรือหมวดหมู่..."
-            />
-            <select className="h-11 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500">
+            <label>
+              <span className="sr-only">ค้นหา Dashboard</span>
+              <input
+                className={`${fieldStyles} h-11 w-full`}
+                placeholder="ค้นหาด้วยชื่อ เจ้าของ tag หรือหมวดหมู่..."
+              />
+            </label>
+            <select className={`${fieldStyles} h-11 text-slate-700`}>
               <option>ทุกสถานะ</option>
               <option>เผยแพร่แล้ว</option>
               <option>รอตรวจสอบ</option>
               <option>ฉบับร่าง</option>
             </select>
-            <select className="h-11 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500">
+            <select className={`${fieldStyles} h-11 text-slate-700`}>
               <option>ทุกระดับข้อมูล</option>
               <option>Public</option>
               <option>Internal</option>
               <option>Confidential</option>
             </select>
-            <button className="h-11 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800">
+            <button className={`${buttonStyles.primary} h-11 justify-center`}>
               กรอง
             </button>
           </div>
-        </section>
+        </FilterShell>
 
-        <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-200 px-4 py-4">
-            <h2 className="text-lg font-semibold">รายการ Dashboard</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              ปุ่มดำเนินการจะเปิดหรือปิดตามสิทธิ์ของผู้ใช้จาก SSO จำลอง
-            </p>
-          </div>
-          <div className="overflow-x-auto">
+        <TableShell
+          title="รายการ Dashboard"
+          description="ปุ่มดำเนินการจะเปิดหรือปิดตามสิทธิ์ของผู้ใช้จาก SSO จำลอง"
+        >
             <table className="w-full border-collapse text-left">
-              <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
+              <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Dashboard</th>
                   <th className="px-4 py-3 font-semibold">Provider / หมวดหมู่</th>
@@ -198,12 +169,11 @@ export default async function CatalogPage() {
               </thead>
               <tbody>
                 {visibleDashboards.map((dashboard) => (
-                  <CatalogRow key={dashboard.id} dashboard={dashboard} />
+                  <CatalogRow key={dashboard.id} currentUser={currentUser} dashboard={dashboard} />
                 ))}
               </tbody>
             </table>
-          </div>
-        </section>
+        </TableShell>
       </div>
     </main>
   );

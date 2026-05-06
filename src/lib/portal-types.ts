@@ -19,6 +19,8 @@ export type SensitivityLevel = "public" | "internal" | "confidential" | "restric
 
 export type EmbedStatus = "embeddable" | "unknown" | "external_only" | "blocked";
 
+export type RefreshFrequency = "unknown" | "daily" | "weekly" | "monthly" | "manual";
+
 export type PortalPermission =
   | "category:create_root"
   | "category:create_child"
@@ -63,6 +65,7 @@ export type Dashboard = {
   provider: DashboardProvider;
   categoryId: string;
   categoryName: string;
+  ownerUserId: string;
   owner: string;
   ownerTeamId: string;
   status: DashboardStatus;
@@ -76,6 +79,8 @@ export type Dashboard = {
   externalUrl: string;
   embedStatus: EmbedStatus;
   embedStatusReason: string;
+  refreshFrequency: RefreshFrequency;
+  dataSourceNote: string | null;
 };
 
 export type MockJwtPayload = {

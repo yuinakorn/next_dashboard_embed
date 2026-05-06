@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { createDashboard, listDashboards } from "@/lib/db/dashboards";
-import { canCreateDashboard } from "@/lib/permissions";
-import type { DashboardProvider, DashboardStatus, SensitivityLevel } from "@/lib/portal-types";
+import { getDashboard, updateDashboard } from "@/lib/db/dashboards";
+import { canCreateDashboard, canUpdateDashboard } from "@/lib/permissions";
+import type {
+  DashboardProvider,
+  RefreshFrequency,
+  SensitivityLevel,
+} from "@/lib/portal-types";
 
 const providers: DashboardProvider[] = [
   "Looker Studio",
@@ -13,10 +17,9 @@ const providers: DashboardProvider[] = [
   "Custom",
 ];
 const sensitivities: SensitivityLevel[] = ["public", "internal", "confidential", "restricted"];
-const statuses: Extract<DashboardStatus, "draft" | "in_review">[] = ["draft", "in_review"];
-const refreshFrequencies = ["unknown", "daily", "weekly", "monthly", "manual"] as const;
+const refreshFrequencies: RefreshFrequency[] = ["unknown", "daily", "weekly", "monthly", "manual"];
 
-type DashboardRequest = {
+type DashboardUpdateRequest = {
   title?: string;
   description?: string;
   provider?: DashboardProvider;
@@ -25,9 +28,8 @@ type DashboardRequest = {
   embedUrl?: string;
   externalUrl?: string;
   tags?: string[];
-  refreshFrequency?: (typeof refreshFrequencies)[number];
+  refreshFrequency?: RefreshFrequency;
   dataSourceNote?: string;
-  status?: Extract<DashboardStatus, "draft" | "in_review">;
 };
 
 function isHttpsUrl(value: string): boolean {
@@ -39,7 +41,7 @@ function isHttpsUrl(value: string): boolean {
   }
 }
 
-function validateRequest(body: DashboardRequest): string[] {
+function validateRequest(body: DashboardUpdateRequest): string[] {
   const errors: string[] = [];
 
   if (!body.title?.trim()) {
@@ -63,9 +65,6 @@ function validateRequest(body: DashboardRequest): string[] {
   if (!body.externalUrl || !isHttpsUrl(body.externalUrl)) {
     errors.push("externalUrl must be a valid HTTPS URL");
   }
-  if (body.status && !statuses.includes(body.status)) {
-    errors.push("status is invalid");
-  }
   if (body.refreshFrequency && !refreshFrequencies.includes(body.refreshFrequency)) {
     errors.push("refreshFrequency is invalid");
   }
@@ -73,32 +72,35 @@ function validateRequest(body: DashboardRequest): string[] {
   return errors;
 }
 
-export async function GET() {
-  try {
-    const currentUser = await getCurrentUser();
-    const dashboards = await listDashboards(currentUser.id);
-    return NextResponse.json({ dashboards });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load dashboards.";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
-export async function POST(request: Request) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const currentUser = await getCurrentUser();
-  const body = (await request.json().catch(() => ({}))) as DashboardRequest;
+  const { id } = await params;
+  const body = (await request.json().catch(() => ({}))) as DashboardUpdateRequest;
   const errors = validateRequest(body);
 
   if (errors.length > 0) {
     return NextResponse.json({ errors }, { status: 400 });
   }
 
-  if (!canCreateDashboard(currentUser, body.categoryId ?? "")) {
-    return NextResponse.json({ error: "Current user cannot create a dashboard in this category." }, { status: 403 });
+  const dashboard = await getDashboard(id, currentUser.id);
+  if (!dashboard) {
+    return NextResponse.json({ error: "Dashboard not found" }, { status: 404 });
+  }
+
+  if (!canUpdateDashboard(currentUser, dashboard)) {
+    return NextResponse.json({ error: "Current user cannot update this dashboard" }, { status: 403 });
+  }
+
+  if (body.categoryId !== dashboard.categoryId && !canCreateDashboard(currentUser, body.categoryId ?? "")) {
+    return NextResponse.json({ error: "Current user cannot move this dashboard to that category" }, { status: 403 });
   }
 
   try {
-    const dashboard = await createDashboard({
+    const updatedDashboard = await updateDashboard({
+      dashboardId: id,
       title: body.title?.trim() ?? "",
       description: body.description?.trim() ?? "",
       provider: body.provider as DashboardProvider,
@@ -109,15 +111,13 @@ export async function POST(request: Request) {
       tags: body.tags ?? [],
       refreshFrequency: body.refreshFrequency ?? "unknown",
       dataSourceNote: body.dataSourceNote?.trim() || null,
-      status: body.status ?? "draft",
-      ownerUserId: currentUser.id,
-      ownerName: currentUser.name,
-      ownerTeamId: currentUser.teamId,
+      actorUserId: currentUser.id,
+      actorName: currentUser.name,
     });
 
-    return NextResponse.json({ dashboard }, { status: 201 });
+    return NextResponse.json({ dashboard: updatedDashboard });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to create dashboard.";
+    const message = error instanceof Error ? error.message : "Unable to update dashboard.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

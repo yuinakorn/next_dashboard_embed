@@ -112,7 +112,7 @@ export function getEmbedStatusTone(status: EmbedStatus): string {
     return "border-rose-200 bg-rose-50 text-rose-800";
   }
 
-  return "border-zinc-200 bg-zinc-50 text-zinc-700";
+  return "border-slate-200 bg-slate-100 text-slate-700";
 }
 
 export function assessEmbedHeaders(headers: EmbedHeaderSnapshot): EmbedAssessment {

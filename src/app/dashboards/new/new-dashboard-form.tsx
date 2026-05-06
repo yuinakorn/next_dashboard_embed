@@ -1,12 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { buttonStyles, fieldStyles } from "@/components/dashboard-ui";
 import type { CategoryOption } from "@/lib/category-utils";
 import { assessEmbedUrl, getEmbedStatusTone } from "@/lib/embed-policy";
 import type { EmbedHealthResult } from "@/lib/embed-policy";
-import type { DashboardProvider, SensitivityLevel } from "@/lib/portal-types";
+import type {
+  Dashboard,
+  DashboardProvider,
+  RefreshFrequency,
+  SensitivityLevel,
+} from "@/lib/portal-types";
 
-type SubmitIntent = "draft" | "review";
+type SubmitIntent = "draft" | "review" | "save";
 
 type FormState = {
   title: string;
@@ -17,7 +23,7 @@ type FormState = {
   embedUrl: string;
   externalUrl: string;
   tags: string;
-  refreshFrequency: string;
+  refreshFrequency: RefreshFrequency;
   dataSourceNote: string;
 };
 
@@ -40,7 +46,7 @@ const providerOptions: DashboardProvider[] = [
 
 const sensitivityOptions: SensitivityLevel[] = ["public", "internal", "confidential", "restricted"];
 
-const refreshFrequencyOptions = ["unknown", "daily", "weekly", "monthly", "manual"];
+const refreshFrequencyOptions: RefreshFrequency[] = ["unknown", "daily", "weekly", "monthly", "manual"];
 
 function isHttpsUrl(value: string): boolean {
   if (!value.trim()) {
@@ -106,26 +112,48 @@ function FieldError({ message }: { message?: string }) {
     return null;
   }
 
-  return <p className="mt-2 text-sm text-rose-600">{message}</p>;
+  return <p className="mt-2 text-sm font-medium text-rose-700">{message}</p>;
 }
 
 export function NewDashboardForm({ categoryOptions }: { categoryOptions: CategoryOption[] }) {
+  return <DashboardMetadataForm categoryOptions={categoryOptions} mode="create" />;
+}
+
+export function EditDashboardForm({
+  categoryOptions,
+  dashboard,
+}: {
+  categoryOptions: CategoryOption[];
+  dashboard: Dashboard;
+}) {
+  return <DashboardMetadataForm categoryOptions={categoryOptions} dashboard={dashboard} mode="edit" />;
+}
+
+function DashboardMetadataForm({
+  categoryOptions,
+  dashboard,
+  mode,
+}: {
+  categoryOptions: CategoryOption[];
+  dashboard?: Dashboard;
+  mode: "create" | "edit";
+}) {
   const [state, setState] = useState<FormState>({
-    title: "",
-    provider: "Looker Studio",
-    description: "",
-    categoryId: categoryOptions[0]?.id ?? "",
-    sensitivity: "internal",
-    embedUrl: "",
-    externalUrl: "",
-    tags: "",
-    refreshFrequency: "unknown",
-    dataSourceNote: "",
+    title: dashboard?.title ?? "",
+    provider: dashboard?.provider ?? "Looker Studio",
+    description: dashboard?.description ?? "",
+    categoryId: dashboard?.categoryId ?? categoryOptions[0]?.id ?? "",
+    sensitivity: dashboard?.sensitivity ?? "internal",
+    embedUrl: dashboard?.embedUrl ?? "",
+    externalUrl: dashboard?.externalUrl ?? "",
+    tags: dashboard?.tags.join(", ") ?? "",
+    refreshFrequency: dashboard?.refreshFrequency ?? "unknown",
+    dataSourceNote: dashboard?.dataSourceNote ?? "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitResult, setSubmitResult] = useState<string | null>(null);
   const [submitResultType, setSubmitResultType] = useState<"success" | "error">("success");
-  const [createdDashboard, setCreatedDashboard] = useState<CreatedDashboardResult | null>(null);
+  const [savedDashboard, setSavedDashboard] = useState<CreatedDashboardResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [healthResult, setHealthResult] = useState<EmbedHealthResult | null>(null);
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
@@ -143,7 +171,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
     setErrors((current) => ({ ...current, [key]: undefined }));
     setSubmitResult(null);
     setSubmitResultType("success");
-    setCreatedDashboard(null);
+    setSavedDashboard(null);
     if (key === "embedUrl" || key === "provider") {
       setHealthResult(null);
     }
@@ -195,11 +223,11 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
     const status = intent === "draft" ? "draft" : "in_review";
     setIsSubmitting(true);
     setSubmitResult(null);
-    setCreatedDashboard(null);
+    setSavedDashboard(null);
 
     try {
-      const response = await fetch("/api/dashboards", {
-        method: "POST",
+      const response = await fetch(mode === "edit" && dashboard ? `/api/dashboards/${dashboard.id}` : "/api/dashboards", {
+        method: mode === "edit" ? "PATCH" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -217,7 +245,7 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             .filter(Boolean),
           refreshFrequency: state.refreshFrequency,
           dataSourceNote: state.dataSourceNote,
-          status,
+          ...(mode === "create" ? { status } : {}),
         }),
       });
       const payload = await response.json();
@@ -231,12 +259,16 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
         return;
       }
 
-      setCreatedDashboard({
+      setSavedDashboard({
         id: payload.dashboard.id,
         title: payload.dashboard.title,
         status: payload.dashboard.status,
       });
-      setSubmitResult(`บันทึกลง MySQL แล้ว สถานะ: ${payload.dashboard.status}`);
+      setSubmitResult(
+        mode === "edit"
+          ? `อัปเดต metadata แล้ว สถานะยังเป็น: ${payload.dashboard.status}`
+          : `บันทึกลง MySQL แล้ว สถานะ: ${payload.dashboard.status}`,
+      );
       setSubmitResultType("success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "ไม่สามารถบันทึก Dashboard ได้";
@@ -248,11 +280,15 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
   }
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="border-b border-zinc-200 pb-4">
-        <h2 className="text-lg font-semibold">ข้อมูลกำกับ Dashboard</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          ฟอร์มนี้ตรวจข้อมูลเบื้องต้นและบันทึก Dashboard ลง MySQL ผ่าน API จริง
+    <section className="rounded-lg border border-slate-200 bg-slate-50 p-5 shadow-sm">
+      <div className="border-b border-slate-200 pb-4">
+        <h2 className="text-lg font-semibold tracking-tight">
+          {mode === "edit" ? "แก้ไขข้อมูลกำกับ Dashboard" : "ข้อมูลกำกับ Dashboard"}
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          {mode === "edit"
+            ? "อัปเดต metadata, URL, หมวดหมู่ และบันทึก audit log ผ่าน API จริง"
+            : "ฟอร์มนี้ตรวจข้อมูลเบื้องต้นและบันทึก Dashboard ลง MySQL ผ่าน API จริง"}
         </p>
       </div>
 
@@ -265,12 +301,12 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
           }`}
         >
           {submitResult}
-          {createdDashboard ? (
+          {savedDashboard ? (
             <a
-              href={`/dashboards/${createdDashboard.id}`}
+              href={`/dashboards/${savedDashboard.id}`}
               className="ml-3 underline"
             >
-              เปิด {createdDashboard.title}
+              เปิด {savedDashboard.title}
             </a>
           ) : null}
         </div>
@@ -279,9 +315,9 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
       <form className="mt-5 space-y-5" onSubmit={(event) => event.preventDefault()}>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">ชื่อ Dashboard</span>
+            <span className="text-sm font-semibold text-slate-700">ชื่อ Dashboard</span>
             <input
-              className="mt-2 h-11 w-full rounded-md border border-zinc-300 px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-zinc-500"
+              className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="เช่น ICU Bed Situation"
               value={state.title}
               onChange={(event) => updateField("title", event.target.value)}
@@ -289,9 +325,9 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             <FieldError message={errors.title} />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Provider</span>
+            <span className="text-sm font-semibold text-slate-700">Provider</span>
             <select
-              className="mt-2 h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500"
+              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
               value={state.provider}
               onChange={(event) => updateField("provider", event.target.value as DashboardProvider)}
             >
@@ -299,14 +335,14 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
                 <option key={provider}>{provider}</option>
               ))}
             </select>
-            <p className="mt-2 text-sm text-zinc-500">{getProviderHint(state.provider)}</p>
+            <p className="mt-2 text-sm text-slate-500">{getProviderHint(state.provider)}</p>
           </label>
         </div>
 
         <label className="block">
-          <span className="text-sm font-medium text-zinc-700">คำอธิบาย</span>
+          <span className="text-sm font-semibold text-slate-700">คำอธิบาย</span>
           <textarea
-            className="mt-2 min-h-28 w-full rounded-md border border-zinc-300 px-3 py-3 text-sm leading-6 outline-none placeholder:text-zinc-400 focus:border-zinc-500"
+            className={`${fieldStyles} mt-2 min-h-28 w-full py-3 leading-6`}
             placeholder="อธิบายว่า dashboard นี้ใช้ตอบคำถามอะไร ใครเป็นผู้รับผิดชอบ และข้อมูลควรถูกใช้อย่างไร"
             value={state.description}
             onChange={(event) => updateField("description", event.target.value)}
@@ -316,9 +352,9 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">หมวดหมู่ที่มีสิทธิ์</span>
+            <span className="text-sm font-semibold text-slate-700">หมวดหมู่ที่มีสิทธิ์</span>
             <select
-              className="mt-2 h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500"
+              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
               value={state.categoryId}
               onChange={(event) => updateField("categoryId", event.target.value)}
             >
@@ -332,9 +368,9 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             <FieldError message={errors.categoryId} />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">ระดับข้อมูล</span>
+            <span className="text-sm font-semibold text-slate-700">ระดับข้อมูล</span>
             <select
-              className="mt-2 h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500"
+              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
               value={state.sensitivity}
               onChange={(event) => updateField("sensitivity", event.target.value as SensitivityLevel)}
             >
@@ -347,9 +383,9 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Embed URL</span>
+            <span className="text-sm font-semibold text-slate-700">Embed URL</span>
             <input
-              className="mt-2 h-11 w-full rounded-md border border-zinc-300 px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-zinc-500"
+              className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="https://..."
               value={state.embedUrl}
               onChange={(event) => updateField("embedUrl", event.target.value)}
@@ -357,9 +393,9 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             <FieldError message={errors.embedUrl} />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">External fallback URL</span>
+            <span className="text-sm font-semibold text-slate-700">External fallback URL</span>
             <input
-              className="mt-2 h-11 w-full rounded-md border border-zinc-300 px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-zinc-500"
+              className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="https://..."
               value={state.externalUrl}
               onChange={(event) => updateField("externalUrl", event.target.value)}
@@ -370,20 +406,20 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Tags</span>
+            <span className="text-sm font-semibold text-slate-700">Tags</span>
             <input
-              className="mt-2 h-11 w-full rounded-md border border-zinc-300 px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-zinc-500"
+              className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="KPI, ICU, จังหวัด"
               value={state.tags}
               onChange={(event) => updateField("tags", event.target.value)}
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">ความถี่การอัปเดต</span>
+            <span className="text-sm font-semibold text-slate-700">ความถี่การอัปเดต</span>
             <select
-              className="mt-2 h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-500"
+              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
               value={state.refreshFrequency}
-              onChange={(event) => updateField("refreshFrequency", event.target.value)}
+              onChange={(event) => updateField("refreshFrequency", event.target.value as RefreshFrequency)}
             >
               {refreshFrequencyOptions.map((option) => (
                 <option key={option}>{option}</option>
@@ -393,9 +429,9 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
         </div>
 
         <label className="block">
-          <span className="text-sm font-medium text-zinc-700">หมายเหตุแหล่งข้อมูล</span>
+          <span className="text-sm font-semibold text-slate-700">หมายเหตุแหล่งข้อมูล</span>
           <textarea
-            className="mt-2 min-h-24 w-full rounded-md border border-zinc-300 px-3 py-3 text-sm leading-6 outline-none placeholder:text-zinc-400 focus:border-zinc-500"
+            className={`${fieldStyles} mt-2 min-h-24 w-full py-3 leading-6`}
             placeholder="ระบุแหล่งข้อมูล เงื่อนไขการตีความ หรือข้อจำกัดที่ผู้ใช้งานควรรู้"
             value={state.dataSourceNote}
             onChange={(event) => updateField("dataSourceNote", event.target.value)}
@@ -403,21 +439,21 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
           <FieldError message={errors.dataSourceNote} />
         </label>
 
-        <section className="overflow-hidden rounded-lg border border-zinc-200">
-          <div className="flex flex-col gap-3 border-b border-zinc-200 bg-zinc-50 px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <section className="overflow-hidden rounded-lg border border-slate-200">
+          <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-800">ตัวอย่าง Embed</h3>
-              <p className="mt-1 text-sm text-zinc-500">{embedAssessment.reason}</p>
+              <h3 className="text-sm font-semibold text-slate-800">ตัวอย่าง Embed</h3>
+              <p className="mt-1 text-sm text-slate-500">{embedAssessment.reason}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`w-fit rounded-md border px-2 py-1 text-xs font-medium ${getEmbedStatusTone(embedAssessment.status)}`}
+                className={`w-fit rounded-md border px-2 py-1 text-xs font-semibold ${getEmbedStatusTone(embedAssessment.status)}`}
               >
                 {embedAssessment.label}
               </span>
               <button
                 type="button"
-                className="h-9 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className={`${buttonStyles.secondary} h-9 px-3`}
                 disabled={!previewUrl || isCheckingHealth}
                 onClick={checkEmbedHealth}
               >
@@ -426,18 +462,18 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             </div>
           </div>
           {healthResult ? (
-            <div className="border-b border-zinc-200 px-4 py-3">
+            <div className="border-b border-slate-200 px-4 py-3">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <div
-                    className={`w-fit rounded-md border px-2 py-1 text-xs font-medium ${getEmbedStatusTone(healthResult.status)}`}
+                    className={`w-fit rounded-md border px-2 py-1 text-xs font-semibold ${getEmbedStatusTone(healthResult.status)}`}
                   >
                     {healthResult.label}
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-zinc-600">{healthResult.reason}</p>
-                  <p className="mt-1 text-sm leading-6 text-zinc-500">{healthResult.recommendation}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{healthResult.reason}</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">{healthResult.recommendation}</p>
                 </div>
-                <div className="text-sm text-zinc-500 md:text-right">
+                <div className="text-sm text-slate-500 md:text-right">
                   <div>ตรวจเมื่อ {new Date(healthResult.checkedAt).toLocaleString()}</div>
                   {healthResult.headers ? (
                     <>
@@ -448,13 +484,13 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
                 </div>
               </div>
               {healthResult.headers ? (
-                <dl className="mt-3 grid gap-2 rounded-md bg-zinc-50 p-3 text-xs text-zinc-600 md:grid-cols-2">
+                <dl className="mt-3 grid gap-2 rounded-md bg-slate-100 p-3 text-xs text-slate-600 md:grid-cols-2">
                   <div>
-                    <dt className="font-semibold text-zinc-800">X-Frame-Options</dt>
+                    <dt className="font-semibold text-slate-800">X-Frame-Options</dt>
                     <dd className="mt-1 break-words">{healthResult.headers.xFrameOptions ?? "not present"}</dd>
                   </div>
                   <div>
-                    <dt className="font-semibold text-zinc-800">Content-Security-Policy</dt>
+                    <dt className="font-semibold text-slate-800">Content-Security-Policy</dt>
                     <dd className="mt-1 break-words">
                       {healthResult.headers.contentSecurityPolicy ?? "not present"}
                     </dd>
@@ -467,17 +503,17 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
             <iframe
               title="New dashboard embed preview"
               src={previewUrl}
-              className="h-80 w-full bg-white"
+              className="h-80 w-full bg-slate-50"
               allowFullScreen
               sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
             />
           ) : (
-            <div className="flex h-48 flex-col items-center justify-center px-4 text-center text-sm text-zinc-500">
+            <div className="flex h-48 flex-col items-center justify-center px-4 text-center text-sm text-slate-500">
               <p>{embedAssessment.recommendation}</p>
               {previewUrl && embedAssessment.status === "external_only" ? (
                 <a
                   href={previewUrl}
-                  className="mt-3 inline-flex h-9 items-center rounded-md border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  className={`${buttonStyles.secondary} mt-3 h-9 px-3`}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -488,23 +524,36 @@ export function NewDashboardForm({ categoryOptions }: { categoryOptions: Categor
           )}
         </section>
 
-        <div className="flex flex-wrap justify-end gap-2 border-t border-zinc-200 pt-5">
-          <button
-            type="button"
-            className="h-10 rounded-md border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            disabled={isSubmitting}
-            onClick={() => handleSubmit("draft")}
-          >
-            {isSubmitting ? "กำลังบันทึก..." : "บันทึกฉบับร่าง"}
-          </button>
-          <button
-            type="button"
-            className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800"
-            disabled={isSubmitting}
-            onClick={() => handleSubmit("review")}
-          >
-            {isSubmitting ? "กำลังบันทึก..." : "ส่งตรวจสอบ"}
-          </button>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-5">
+          {mode === "create" ? (
+            <>
+              <button
+                type="button"
+                className={`${buttonStyles.secondary} h-10`}
+                disabled={isSubmitting}
+                onClick={() => handleSubmit("draft")}
+              >
+                {isSubmitting ? "กำลังบันทึก..." : "บันทึกฉบับร่าง"}
+              </button>
+              <button
+                type="button"
+                className={`${buttonStyles.primary} h-10`}
+                disabled={isSubmitting}
+                onClick={() => handleSubmit("review")}
+              >
+                {isSubmitting ? "กำลังบันทึก..." : "ส่งตรวจสอบ"}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className={`${buttonStyles.primary} h-10`}
+              disabled={isSubmitting}
+              onClick={() => handleSubmit("save")}
+            >
+              {isSubmitting ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
+            </button>
+          )}
         </div>
       </form>
     </section>

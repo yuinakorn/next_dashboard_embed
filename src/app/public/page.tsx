@@ -1,8 +1,5 @@
-import {
-  publicDashboards,
-  publicPinnedDashboards,
-  publicPopularDashboards,
-} from "@/lib/mock-portal-data";
+import { Badge, buttonStyles, fieldStyles } from "@/components/dashboard-ui";
+import { listPublicDashboards } from "@/lib/db/dashboards";
 import type { Dashboard, DashboardProvider } from "@/lib/portal-types";
 import Link from "next/link";
 
@@ -14,14 +11,6 @@ const providerStyles: Record<DashboardProvider, string> = {
   "Power BI": "border-yellow-200 bg-yellow-50 text-yellow-900",
   Custom: "border-slate-200 bg-slate-100 text-slate-700",
 };
-
-function Badge({ children, className }: { children: React.ReactNode; className: string }) {
-  return (
-    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${className}`}>
-      {children}
-    </span>
-  );
-}
 
 function PublicDashboardCard({
   dashboard,
@@ -67,13 +56,13 @@ function PublicDashboardCard({
       <div className="mt-5 flex flex-wrap gap-2">
         <Link
           href={`/dashboards/${dashboard.id}`}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-slate-50 transition duration-200 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+          className={`${buttonStyles.primary} h-10 justify-center`}
         >
           เปิด dashboard
         </Link>
         <a
           href={dashboard.externalUrl}
-          className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-200 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+          className={`${buttonStyles.secondary} h-10 justify-center`}
           target="_blank"
           rel="noreferrer"
         >
@@ -84,7 +73,15 @@ function PublicDashboardCard({
   );
 }
 
-function PublicDataPreview({ dashboard }: { dashboard?: Dashboard }) {
+function PublicDataPreview({
+  dashboard,
+  dashboardCount,
+  pinnedCount,
+}: {
+  dashboard?: Dashboard;
+  dashboardCount: number;
+  pinnedCount: number;
+}) {
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-[0_24px_70px_-52px_rgba(15,23,42,0.75)]">
       <div className="flex items-center justify-between gap-4">
@@ -113,7 +110,7 @@ function PublicDataPreview({ dashboard }: { dashboard?: Dashboard }) {
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <div className="rounded-md bg-emerald-50 p-3">
           <strong className="block text-2xl font-semibold text-emerald-950">
-            {publicDashboards.length}
+            {dashboardCount}
           </strong>
           <span className="mt-1 block text-xs font-medium text-emerald-800">
             Dashboard สาธารณะ
@@ -121,7 +118,7 @@ function PublicDataPreview({ dashboard }: { dashboard?: Dashboard }) {
         </div>
         <div className="rounded-md bg-sky-50 p-3">
           <strong className="block text-2xl font-semibold text-sky-950">
-            {publicPinnedDashboards.length}
+            {pinnedCount}
           </strong>
           <span className="mt-1 block text-xs font-medium text-sky-800">รายการแนะนำ</span>
         </div>
@@ -152,7 +149,7 @@ function PublicRow({ dashboard }: { dashboard: Dashboard }) {
           </span>
           <Link
             href={`/dashboards/${dashboard.id}`}
-            className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 transition duration-200 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+            className={`${buttonStyles.secondary} h-9 px-3`}
           >
             เปิด
           </Link>
@@ -162,7 +159,12 @@ function PublicRow({ dashboard }: { dashboard: Dashboard }) {
   );
 }
 
-export default function PublicHome() {
+export default async function PublicHome() {
+  const publicDashboards = await listPublicDashboards();
+  const publicPinnedDashboards = publicDashboards.filter((dashboard) => dashboard.isPinned);
+  const publicPopularDashboards = [...publicDashboards].sort(
+    (first, second) => second.views - first.views,
+  );
   const featuredDashboard = publicPinnedDashboards[0] ?? publicPopularDashboards[0];
   const recommendedDashboards = publicPinnedDashboards.length
     ? publicPinnedDashboards
@@ -217,19 +219,23 @@ export default function PublicHome() {
             <div className="mt-6 flex flex-wrap gap-2">
               <a
                 href="#catalog"
-                className="inline-flex h-11 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-slate-50 transition duration-200 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+                className={`${buttonStyles.primary} h-11 justify-center`}
               >
                 ดูรายการข้อมูล
               </a>
               <Link
                 href="/"
-                className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition duration-200 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+                className={`${buttonStyles.secondary} h-11 justify-center`}
               >
                 เจ้าหน้าที่เข้าสู่ระบบ
               </Link>
             </div>
           </div>
-          <PublicDataPreview dashboard={featuredDashboard} />
+          <PublicDataPreview
+            dashboard={featuredDashboard}
+            dashboardCount={publicDashboards.length}
+            pinnedCount={publicPinnedDashboards.length}
+          />
         </div>
       </section>
 
@@ -239,17 +245,17 @@ export default function PublicHome() {
             <label>
               <span className="sr-only">ค้นหา Dashboard สาธารณะ</span>
               <input
-                className="h-11 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm outline-none transition duration-200 placeholder:text-slate-400 focus:border-sky-700 focus:ring-2 focus:ring-sky-100"
+                className={`${fieldStyles} h-11 w-full`}
                 placeholder="ค้นหาด้วยชื่อ dashboard, คำสำคัญ, หมวดข้อมูล..."
               />
             </label>
-            <select className="h-11 rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition duration-200 focus:border-sky-700 focus:ring-2 focus:ring-sky-100">
+            <select className={`${fieldStyles} h-11 text-slate-700`}>
               <option>ทุกหมวดข้อมูล</option>
               <option>บริการสุขภาพ</option>
               <option>เวลารอคอย</option>
               <option>ภาพรวมระบบ</option>
             </select>
-            <button className="h-11 rounded-md bg-slate-950 px-4 text-sm font-semibold text-slate-50 transition duration-200 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700">
+            <button className={`${buttonStyles.primary} h-11 justify-center`}>
               ค้นหา
             </button>
           </div>
