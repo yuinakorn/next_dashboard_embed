@@ -73,7 +73,7 @@ export default async function AuditPage() {
 
       <div className="mx-auto max-w-7xl space-y-6 px-5 py-6">
         {!canReadAudit ? (
-          <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900">
+          <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
             ผู้ใช้จำลองปัจจุบันไม่มีสิทธิ์ `audit:read` หน้านี้แสดงไว้เพื่อดูรูปแบบเท่านั้น
           </section>
         ) : null}

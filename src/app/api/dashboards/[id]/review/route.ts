@@ -25,6 +25,14 @@ export async function POST(
     return NextResponse.json({ error: "Dashboard not found" }, { status: 404 });
   }
 
+  if (dashboard.status !== "in_review") {
+    return NextResponse.json({ error: "Dashboard is not waiting for review" }, { status: 409 });
+  }
+
+  if (body.decision === "reject" && !body.note?.trim()) {
+    return NextResponse.json({ error: "note is required when rejecting a dashboard" }, { status: 400 });
+  }
+
   if (!canPublishDashboard(currentUser, dashboard)) {
     return NextResponse.json({ error: "Current user cannot publish this dashboard" }, { status: 403 });
   }

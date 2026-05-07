@@ -1,9 +1,17 @@
 import { notFound } from "next/navigation";
 import { PageHeader, buttonStyles } from "@/components/dashboard-ui";
+import { DashboardLifecycleActions } from "./dashboard-lifecycle-actions";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { listAuditEventsForEntity } from "@/lib/db/audit";
 import { getDashboard } from "@/lib/db/dashboards";
 import { getEmbedStatusTone } from "@/lib/embed-policy";
-import { canUpdateDashboard, canViewDashboard } from "@/lib/permissions";
+import {
+  canArchiveDashboard,
+  canPublishDashboard,
+  canSubmitDashboardForReview,
+  canUpdateDashboard,
+  canViewDashboard,
+} from "@/lib/permissions";
 
 type DashboardViewerPageProps = {
   params: Promise<{
@@ -20,6 +28,7 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
     notFound();
   }
 
+  const auditEvents = await listAuditEventsForEntity("dashboard", dashboard.id);
   const needsFallback =
     dashboard.embedStatus === "external_only" || dashboard.embedStatus === "blocked";
   const actions = [
@@ -77,6 +86,42 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
             </div>
           </dl>
         </section>
+
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <DashboardLifecycleActions
+            dashboard={dashboard}
+            canSubmit={canSubmitDashboardForReview(currentUser, dashboard)}
+            canArchive={canArchiveDashboard(currentUser, dashboard)}
+            canReview={dashboard.status === "in_review" && canPublishDashboard(currentUser, dashboard)}
+          />
+
+          <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Audit Trail</h2>
+              <p className="mt-1 text-sm text-slate-500">รายการล่าสุดของ Dashboard นี้</p>
+            </div>
+            {auditEvents.length ? (
+              <div className="mt-4 divide-y divide-slate-200">
+                {auditEvents.slice(0, 5).map((event) => (
+                  <div key={event.id} className="py-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-900">{event.action}</span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(event.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="mt-1 leading-6 text-slate-600">{event.note}</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">{event.actorName}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-100 p-4 text-center text-sm text-slate-500">
+                ยังไม่มี audit event สำหรับ Dashboard นี้
+              </div>
+            )}
+          </section>
+        </div>
 
         <section className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
           <div className="flex flex-col gap-2 border-b border-slate-200 px-4 py-3 md:flex-row md:items-center md:justify-between">

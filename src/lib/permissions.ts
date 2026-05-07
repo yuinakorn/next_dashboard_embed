@@ -98,6 +98,14 @@ export function canUpdateDashboard(user: PortalUser, dashboard: Dashboard): bool
   return hasPermission(user, "dashboard:update_own") && dashboard.ownerUserId === user.id;
 }
 
+export function canSubmitDashboardForReview(user: PortalUser, dashboard: Dashboard): boolean {
+  return (
+    hasPermission(user, "dashboard:submit_review") &&
+    (dashboard.status === "draft" || dashboard.status === "rejected") &&
+    canUpdateDashboard(user, dashboard)
+  );
+}
+
 export function canPublishDashboard(user: PortalUser, dashboard: Dashboard): boolean {
   if (!hasPermission(user, "dashboard:publish")) {
     return false;
@@ -107,6 +115,18 @@ export function canPublishDashboard(user: PortalUser, dashboard: Dashboard): boo
     hasPermission(user, "category:create_root") ||
     user.scopes.some((scope) => scope.categoryIds.includes(dashboard.categoryId))
   );
+}
+
+export function canArchiveDashboard(user: PortalUser, dashboard: Dashboard): boolean {
+  if (!hasPermission(user, "dashboard:archive")) {
+    return false;
+  }
+
+  if (hasPermission(user, "category:create_root")) {
+    return dashboard.status !== "archived";
+  }
+
+  return dashboard.status !== "archived" && dashboard.ownerTeamId === user.teamId;
 }
 
 export function canViewDashboard(user: PortalUser, dashboard: Dashboard): boolean {

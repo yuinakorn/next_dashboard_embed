@@ -89,7 +89,7 @@ function ReviewCard({
         </Link>
       </div>
 
-      <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-100 p-3 text-sm leading-6 text-slate-700">
         {dashboard.embedStatusReason}
       </div>
 

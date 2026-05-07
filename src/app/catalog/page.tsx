@@ -12,7 +12,9 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { listDashboards } from "@/lib/db/dashboards";
 import { getEmbedStatusTone } from "@/lib/embed-policy";
 import {
+  canArchiveDashboard,
   canPublishDashboard,
+  canSubmitDashboardForReview,
   canUpdateDashboard,
   getUserPermissions,
 } from "@/lib/permissions";
@@ -38,6 +40,8 @@ const sensitivityTone: Record<SensitivityLevel, string> = {
 function CatalogRow({ currentUser, dashboard }: { currentUser: PortalUser; dashboard: Dashboard }) {
   const canUpdate = canUpdateDashboard(currentUser, dashboard);
   const canPublish = canPublishDashboard(currentUser, dashboard);
+  const canSubmit = canSubmitDashboardForReview(currentUser, dashboard);
+  const canArchive = canArchiveDashboard(currentUser, dashboard);
 
   return (
     <tr className="border-b border-slate-200 last:border-0 hover:bg-slate-50">
@@ -79,18 +83,24 @@ function CatalogRow({ currentUser, dashboard }: { currentUser: PortalUser; dashb
           >
             เปิด
           </Link>
-          <button
-            className={`${buttonStyles.secondary} h-9 px-3`}
-            disabled={!canUpdate}
+          <Link
+            href={canUpdate ? `/dashboards/${dashboard.id}/edit` : `/dashboards/${dashboard.id}`}
+            className={`${buttonStyles.secondary} h-9 px-3 ${!canUpdate ? "pointer-events-none opacity-50" : ""}`}
+            aria-disabled={!canUpdate}
           >
             แก้ไข
-          </button>
-          <button
-            className={`${buttonStyles.primary} h-9 px-3`}
-            disabled={!canPublish}
+          </Link>
+          <Link
+            href={`/dashboards/${dashboard.id}`}
+            className={`${buttonStyles.primary} h-9 px-3 ${
+              !canSubmit && !(canPublish && dashboard.status === "in_review") && !canArchive
+                ? "pointer-events-none opacity-50"
+                : ""
+            }`}
+            aria-disabled={!canSubmit && !(canPublish && dashboard.status === "in_review") && !canArchive}
           >
-            เผยแพร่
-          </button>
+            Workflow
+          </Link>
         </div>
       </td>
     </tr>

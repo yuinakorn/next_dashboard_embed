@@ -77,11 +77,11 @@ export function MetricTile({
 }) {
   const toneClass = {
     neutral: "bg-slate-100 text-slate-950 ring-slate-200",
-    info: "bg-sky-50 text-sky-950 ring-sky-200",
-    review: "bg-amber-50 text-amber-950 ring-amber-200",
-    success: "bg-emerald-50 text-emerald-950 ring-emerald-200",
-    risk: "bg-rose-50 text-rose-950 ring-rose-200",
-    category: "bg-violet-50 text-violet-950 ring-violet-200",
+    info: "bg-slate-100 text-slate-950 ring-slate-200",
+    review: "bg-slate-100 text-slate-950 ring-slate-200",
+    success: "bg-slate-100 text-slate-950 ring-slate-200",
+    risk: "bg-slate-100 text-slate-950 ring-slate-200",
+    category: "bg-slate-100 text-slate-950 ring-slate-200",
   };
 
   return (
@@ -119,4 +119,3 @@ export function TableShell({
     </section>
   );
 }
-

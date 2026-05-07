@@ -50,3 +50,32 @@ export async function listAuditEvents(limit = 100): Promise<AuditEvent[]> {
 
   return rows.map(rowToAuditEvent);
 }
+
+export async function listAuditEventsForEntity(
+  entityType: AuditEvent["entityType"],
+  entityId: string,
+  limit = 20,
+): Promise<AuditEvent[]> {
+  const [rows] = await getDbPool().query<AuditEventRow[]>(
+    `
+      SELECT
+        id,
+        actor_user_id,
+        actor_name,
+        action,
+        entity_type,
+        entity_id,
+        entity_title,
+        note,
+        created_at
+      FROM portal_audit_logs
+      WHERE entity_type = :entityType
+        AND entity_id = :entityId
+      ORDER BY created_at DESC
+      LIMIT :limit
+    `,
+    { entityType, entityId, limit },
+  );
+
+  return rows.map(rowToAuditEvent);
+}

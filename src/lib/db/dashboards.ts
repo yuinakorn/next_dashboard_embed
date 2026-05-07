@@ -78,6 +78,13 @@ export type UpdateDashboardInput = {
   actorName: string;
 };
 
+export type DashboardLifecycleInput = {
+  dashboardId: string;
+  actorUserId: string;
+  actorName: string;
+  note?: string;
+};
+
 function rowToDashboard(row: DashboardRow): Dashboard {
   const categoryName = row.parent_category_name
     ? `${row.parent_category_name} / ${row.category_name}`
@@ -112,6 +119,7 @@ function rowToDashboard(row: DashboardRow): Dashboard {
 async function queryDashboards(
   userId: string,
   options: {
+    includeArchived?: boolean;
     publicOnly?: boolean;
   } = {},
 ): Promise<Dashboard[]> {
@@ -149,7 +157,7 @@ async function queryDashboards(
         AND f.user_id = :userId
       LEFT JOIN portal_dashboard_tags dt ON dt.dashboard_id = d.id
       LEFT JOIN portal_tags t ON t.id = dt.tag_id
-      WHERE d.status <> 'archived'
+      WHERE (:includeArchived = TRUE OR d.status <> 'archived')
         AND (:publicOnly = FALSE OR (d.status = 'published' AND d.sensitivity = 'public'))
       GROUP BY
         d.id, d.title, d.description, d.provider, d.category_id, c.name, pc.name, d.owner_user_id,
@@ -158,7 +166,11 @@ async function queryDashboards(
         d.refresh_frequency, d.data_source_note
       ORDER BY d.updated_at DESC
     `,
-    { userId, publicOnly: Boolean(options.publicOnly) },
+    {
+      userId,
+      includeArchived: Boolean(options.includeArchived),
+      publicOnly: Boolean(options.publicOnly),
+    },
   );
 
   return rows.map(rowToDashboard);
@@ -173,7 +185,7 @@ export async function listPublicDashboards(): Promise<Dashboard[]> {
 }
 
 export async function getDashboard(id: string, userId: string): Promise<Dashboard | null> {
-  const dashboards = await listDashboards(userId);
+  const dashboards = await queryDashboards(userId, { includeArchived: true });
   return dashboards.find((dashboard) => dashboard.id === id) ?? null;
 }
 
@@ -450,6 +462,100 @@ export async function updateDashboard(input: UpdateDashboardInput): Promise<Dash
   } finally {
     connection.release();
   }
+}
+
+async function changeDashboardStatus({
+  dashboardId,
+  nextStatus,
+  actorUserId,
+  actorName,
+  action,
+  note,
+}: DashboardLifecycleInput & {
+  nextStatus: DashboardStatus;
+  action: string;
+  note: string;
+}): Promise<Dashboard> {
+  const pool = getDbPool();
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+    const before = await getDashboardForUpdate(connection, dashboardId);
+
+    if (!before) {
+      throw new Error("Dashboard not found.");
+    }
+
+    await connection.query<ResultSetHeader>(
+      `
+        UPDATE portal_dashboards
+        SET
+          status = :status,
+          last_reviewed_at = CASE WHEN :status IN ('published', 'rejected') THEN CURRENT_TIMESTAMP ELSE last_reviewed_at END,
+          published_at = CASE WHEN :status = 'published' THEN CURRENT_TIMESTAMP ELSE published_at END
+        WHERE id = :id
+      `,
+      {
+        id: dashboardId,
+        status: nextStatus,
+      },
+    );
+
+    await connection.query<ResultSetHeader>(
+      `
+        INSERT INTO portal_audit_logs (
+          id, actor_user_id, actor_name, action, entity_type, entity_id, entity_title,
+          note, before_json, after_json
+        )
+        VALUES (
+          :auditId, :actorUserId, :actorName, :action, 'dashboard', :entityId, :entityTitle,
+          :note, :beforeJson, :afterJson
+        )
+      `,
+      {
+        auditId: `audit-${crypto.randomUUID()}`,
+        actorUserId,
+        actorName,
+        action,
+        entityId: dashboardId,
+        entityTitle: before.title,
+        note,
+        beforeJson: JSON.stringify({ id: before.id, status: before.status }),
+        afterJson: JSON.stringify({ id: before.id, status: nextStatus }),
+      },
+    );
+
+    await connection.commit();
+    const dashboard = await getDashboard(dashboardId, actorUserId);
+    if (!dashboard) {
+      throw new Error("Dashboard could not be loaded after status change.");
+    }
+    return dashboard;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function submitDashboardForReview(input: DashboardLifecycleInput): Promise<Dashboard> {
+  return changeDashboardStatus({
+    ...input,
+    nextStatus: "in_review",
+    action: "dashboard.submit_review",
+    note: input.note?.trim() || "Dashboard submitted for review.",
+  });
+}
+
+export async function archiveDashboard(input: DashboardLifecycleInput): Promise<Dashboard> {
+  return changeDashboardStatus({
+    ...input,
+    nextStatus: "archived",
+    action: "dashboard.archive",
+    note: input.note?.trim() || "Dashboard archived.",
+  });
 }
 
 export async function reviewDashboard(input: ReviewDashboardInput): Promise<Dashboard> {

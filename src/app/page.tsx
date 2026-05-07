@@ -103,10 +103,10 @@ function WorkMetric({
   href: string;
 }) {
   const toneClasses = {
-    review: "bg-amber-50 text-amber-950 ring-amber-200",
-    risk: "bg-rose-50 text-rose-950 ring-rose-200",
-    ok: "bg-emerald-50 text-emerald-950 ring-emerald-200",
-    info: "bg-sky-50 text-sky-950 ring-sky-200",
+    review: "bg-slate-100 text-slate-950 ring-slate-200",
+    risk: "bg-slate-100 text-slate-950 ring-slate-200",
+    ok: "bg-slate-100 text-slate-950 ring-slate-200",
+    info: "bg-slate-100 text-slate-950 ring-slate-200",
   };
 
   return (
@@ -270,15 +270,15 @@ function CompactDashboardList({
 
 function RiskPanel({ dashboards }: { dashboards: Dashboard[] }) {
   return (
-    <section className="rounded-lg border border-rose-200 bg-rose-50 p-4">
+    <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-rose-950">Embed risk lane</h2>
-          <p className="mt-1 text-sm leading-6 text-rose-800">
+          <h2 className="text-base font-semibold text-slate-950">Embed risk lane</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
             Dashboard ที่ควรเปิดผ่าน fallback หรือเช็ค iframe policy ก่อนเผยแพร่
           </p>
         </div>
-        <span className="rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-800">
+        <span className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700">
           {dashboards.length}
         </span>
       </div>
@@ -494,15 +494,15 @@ export default async function Home() {
             <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)]">
               {mainPinnedDashboard ? <FeaturedDashboard dashboard={mainPinnedDashboard} /> : null}
               <div className="grid gap-4">
-                <section className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-base font-semibold text-amber-950">งานที่ควรจัดการก่อน</h2>
-                      <p className="mt-1 text-sm leading-6 text-amber-800">
+                      <h2 className="text-base font-semibold text-slate-950">งานที่ควรจัดการก่อน</h2>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">
                         รายการที่รอ review หรือมีความเสี่ยงจาก embed policy
                       </p>
                     </div>
-                    <span className="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+                    <span className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700">
                       {operationalDashboards.length}
                     </span>
                   </div>

@@ -22,7 +22,7 @@ function PublicDashboardCard({
   return (
     <article
       className={`rounded-lg border bg-slate-50 p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
-        featured ? "border-sky-200 shadow-[0_20px_60px_-42px_rgba(14,116,144,0.55)]" : "border-slate-200"
+        featured ? "border-slate-200 shadow-sm" : "border-slate-200"
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -108,19 +108,19 @@ function PublicDataPreview({
         ))}
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-md bg-emerald-50 p-3">
-          <strong className="block text-2xl font-semibold text-emerald-950">
+        <div className="rounded-md bg-slate-100 p-3">
+          <strong className="block text-2xl font-semibold text-slate-950">
             {dashboardCount}
           </strong>
-          <span className="mt-1 block text-xs font-medium text-emerald-800">
+          <span className="mt-1 block text-xs font-medium text-slate-600">
             Dashboard สาธารณะ
           </span>
         </div>
-        <div className="rounded-md bg-sky-50 p-3">
-          <strong className="block text-2xl font-semibold text-sky-950">
+        <div className="rounded-md bg-slate-100 p-3">
+          <strong className="block text-2xl font-semibold text-slate-950">
             {pinnedCount}
           </strong>
-          <span className="mt-1 block text-xs font-medium text-sky-800">รายการแนะนำ</span>
+          <span className="mt-1 block text-xs font-medium text-slate-600">รายการแนะนำ</span>
         </div>
         <div className="rounded-md bg-slate-100 p-3">
           <strong className="block text-2xl font-semibold text-slate-950">0</strong>
@@ -269,7 +269,7 @@ export default async function PublicHome() {
               </h2>
               <p className="mt-1 text-sm text-slate-500">ข้อมูลที่หน่วยงานเลือกให้ประชาชนเห็นก่อน</p>
             </div>
-            <span className="rounded-md bg-sky-50 px-2 py-1 text-sm font-semibold text-sky-800">
+            <span className="rounded-md bg-slate-200 px-2 py-1 text-sm font-semibold text-slate-700">
               {recommendedDashboards.length} รายการ
             </span>
           </div>
