@@ -12,6 +12,72 @@ const providerStyles: Record<DashboardProvider, string> = {
   Custom: "border-slate-200 bg-slate-100 text-slate-700",
 };
 
+const providers: DashboardProvider[] = [
+  "Looker Studio",
+  "Superset",
+  "Grafana",
+  "Metabase",
+  "Power BI",
+  "Custom",
+];
+const sortOptions = ["views_desc", "updated_desc", "title_asc"] as const;
+
+type PublicSearchParams = {
+  q?: string;
+  provider?: string;
+  category?: string;
+  sort?: string;
+};
+
+function isProvider(value: string): value is DashboardProvider {
+  return providers.includes(value as DashboardProvider);
+}
+
+function normalizeSearchParams(searchParams: PublicSearchParams) {
+  return {
+    q: searchParams.q?.trim() ?? "",
+    provider: searchParams.provider && isProvider(searchParams.provider) ? searchParams.provider : "all",
+    category: searchParams.category?.trim() || "all",
+    sort: sortOptions.includes(searchParams.sort as (typeof sortOptions)[number])
+      ? (searchParams.sort as (typeof sortOptions)[number])
+      : "views_desc",
+  };
+}
+
+function dashboardMatchesQuery(dashboard: Dashboard, query: string): boolean {
+  if (!query) {
+    return true;
+  }
+
+  const searchable = [
+    dashboard.title,
+    dashboard.description,
+    dashboard.provider,
+    dashboard.categoryName,
+    ...dashboard.tags,
+  ]
+    .join(" ")
+    .toLocaleLowerCase("th-TH");
+
+  return searchable.includes(query.toLocaleLowerCase("th-TH"));
+}
+
+function filterDashboards(dashboards: Dashboard[], filters: ReturnType<typeof normalizeSearchParams>) {
+  return dashboards
+    .filter((dashboard) => dashboardMatchesQuery(dashboard, filters.q))
+    .filter((dashboard) => filters.provider === "all" || dashboard.provider === filters.provider)
+    .filter((dashboard) => filters.category === "all" || dashboard.categoryId === filters.category)
+    .sort((first, second) => {
+      if (filters.sort === "updated_desc") {
+        return new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime();
+      }
+      if (filters.sort === "title_asc") {
+        return first.title.localeCompare(second.title, "th-TH");
+      }
+      return second.views - first.views;
+    });
+}
+
 function PublicDashboardCard({
   dashboard,
   featured = false,
@@ -159,15 +225,25 @@ function PublicRow({ dashboard }: { dashboard: Dashboard }) {
   );
 }
 
-export default async function PublicHome() {
+export default async function PublicHome({
+  searchParams,
+}: {
+  searchParams: Promise<PublicSearchParams>;
+}) {
+  const filters = normalizeSearchParams(await searchParams);
   const publicDashboards = await listPublicDashboards();
+  const filteredDashboards = filterDashboards(publicDashboards, filters);
+  const categoryOptions = Array.from(
+    new Map(publicDashboards.map((dashboard) => [dashboard.categoryId, dashboard.categoryName])).entries(),
+  ).sort((first, second) => first[1].localeCompare(second[1], "th-TH"));
   const publicPinnedDashboards = publicDashboards.filter((dashboard) => dashboard.isPinned);
-  const publicPopularDashboards = [...publicDashboards].sort(
+  const filteredPinnedDashboards = filteredDashboards.filter((dashboard) => dashboard.isPinned);
+  const publicPopularDashboards = [...filteredDashboards].sort(
     (first, second) => second.views - first.views,
   );
   const featuredDashboard = publicPinnedDashboards[0] ?? publicPopularDashboards[0];
-  const recommendedDashboards = publicPinnedDashboards.length
-    ? publicPinnedDashboards
+  const recommendedDashboards = filteredPinnedDashboards.length
+    ? filteredPinnedDashboards
     : publicPopularDashboards.slice(0, 2);
 
   return (
@@ -241,24 +317,41 @@ export default async function PublicHome() {
 
       <div className="mx-auto max-w-7xl space-y-8 px-5 py-8">
         <section className="rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-[1fr_220px_160px]">
+          <form className="grid gap-3 lg:grid-cols-[1fr_190px_220px_160px_120px]">
             <label>
               <span className="sr-only">ค้นหา Dashboard สาธารณะ</span>
               <input
+                name="q"
                 className={`${fieldStyles} h-11 w-full`}
                 placeholder="ค้นหาด้วยชื่อ dashboard, คำสำคัญ, หมวดข้อมูล..."
+                defaultValue={filters.q}
               />
             </label>
-            <select className={`${fieldStyles} h-11 text-slate-700`}>
-              <option>ทุกหมวดข้อมูล</option>
-              <option>บริการสุขภาพ</option>
-              <option>เวลารอคอย</option>
-              <option>ภาพรวมระบบ</option>
+            <select name="provider" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.provider}>
+              <option value="all">ทุก provider</option>
+              {providers.map((provider) => (
+                <option key={provider} value={provider}>
+                  {provider}
+                </option>
+              ))}
             </select>
-            <button className={`${buttonStyles.primary} h-11 justify-center`}>
+            <select name="category" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.category}>
+              <option value="all">ทุกหมวดข้อมูล</option>
+              {categoryOptions.map(([categoryId, categoryName]) => (
+                <option key={categoryId} value={categoryId}>
+                  {categoryName}
+                </option>
+              ))}
+            </select>
+            <select name="sort" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.sort}>
+              <option value="views_desc">ยอดดูสูงสุด</option>
+              <option value="updated_desc">อัปเดตล่าสุด</option>
+              <option value="title_asc">ชื่อ A-Z</option>
+            </select>
+            <button type="submit" className={`${buttonStyles.primary} h-11 justify-center`}>
               ค้นหา
             </button>
-          </div>
+          </form>
         </section>
 
         <section>
@@ -292,7 +385,7 @@ export default async function PublicHome() {
                 </p>
               </div>
               <span className="text-sm font-semibold text-slate-500">
-                {publicPopularDashboards.length} รายการ
+                {filteredDashboards.length} รายการ
               </span>
             </div>
             <ul className="mt-4 space-y-3">
@@ -300,6 +393,11 @@ export default async function PublicHome() {
                 <PublicRow key={dashboard.id} dashboard={dashboard} />
               ))}
             </ul>
+            {!publicPopularDashboards.length ? (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                ไม่พบ Dashboard สาธารณะที่ตรงกับเงื่อนไขการค้นหา
+              </div>
+            ) : null}
           </div>
 
           <aside className="rounded-lg border border-slate-200 bg-slate-50 p-4">

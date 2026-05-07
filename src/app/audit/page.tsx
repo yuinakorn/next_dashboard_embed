@@ -11,13 +11,82 @@ import { listAuditEvents } from "@/lib/db/audit";
 import { hasPermission } from "@/lib/permissions";
 import type { AuditEvent } from "@/lib/portal-types";
 
+const entityTypes: AuditEvent["entityType"][] = ["dashboard", "category", "permission"];
+
 const actionTone: Record<string, string> = {
   "dashboard.publish": "bg-emerald-50 text-emerald-800",
   "dashboard.reject": "bg-rose-50 text-rose-800",
   "dashboard.submit_review": "bg-amber-50 text-amber-900",
+  "dashboard.archive": "bg-slate-200 text-slate-700",
+  "dashboard.update": "bg-sky-50 text-sky-800",
   "dashboard.update_embed_url": "bg-sky-50 text-sky-800",
   "category.create_child": "bg-violet-50 text-violet-800",
 };
+
+type AuditSearchParams = {
+  q?: string;
+  action?: string;
+  entity?: string;
+  from?: string;
+  to?: string;
+};
+
+function normalizeSearchParams(searchParams: AuditSearchParams, events: AuditEvent[]) {
+  const actionOptions = Array.from(new Set(events.map((event) => event.action))).sort();
+  const entity = entityTypes.includes(searchParams.entity as AuditEvent["entityType"])
+    ? (searchParams.entity as AuditEvent["entityType"])
+    : "all";
+
+  return {
+    q: searchParams.q?.trim() ?? "",
+    action: searchParams.action && actionOptions.includes(searchParams.action) ? searchParams.action : "all",
+    entity,
+    from: isDateInput(searchParams.from) ? searchParams.from : "",
+    to: isDateInput(searchParams.to) ? searchParams.to : "",
+    actionOptions,
+  };
+}
+
+function isDateInput(value?: string): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function auditMatchesQuery(event: AuditEvent, query: string): boolean {
+  if (!query) {
+    return true;
+  }
+
+  const searchable = [
+    event.action,
+    event.entityType,
+    event.entityId,
+    event.entityTitle,
+    event.note,
+    event.actorName,
+    event.actorUserId,
+  ]
+    .join(" ")
+    .toLocaleLowerCase("th-TH");
+
+  return searchable.includes(query.toLocaleLowerCase("th-TH"));
+}
+
+function filterAuditEvents(events: AuditEvent[], filters: ReturnType<typeof normalizeSearchParams>) {
+  const fromTime = filters.from ? new Date(`${filters.from}T00:00:00`).getTime() : null;
+  const toTime = filters.to ? new Date(`${filters.to}T23:59:59.999`).getTime() : null;
+
+  return events.filter((event) => {
+    const eventTime = new Date(event.createdAt).getTime();
+
+    return (
+      auditMatchesQuery(event, filters.q) &&
+      (filters.action === "all" || event.action === filters.action) &&
+      (filters.entity === "all" || event.entityType === filters.entity) &&
+      (fromTime === null || eventTime >= fromTime) &&
+      (toTime === null || eventTime <= toTime)
+    );
+  });
+}
 
 function AuditRow({ event }: { event: AuditEvent }) {
   return (
@@ -51,12 +120,17 @@ function AuditRow({ event }: { event: AuditEvent }) {
   );
 }
 
-export default async function AuditPage() {
+export default async function AuditPage({
+  searchParams,
+}: {
+  searchParams: Promise<AuditSearchParams>;
+}) {
   const currentUser = await getCurrentUser();
   const auditEvents = await listAuditEvents();
+  const filters = normalizeSearchParams(await searchParams, auditEvents);
+  const filteredAuditEvents = filterAuditEvents(auditEvents, filters);
   const canReadAudit = hasPermission(currentUser, "audit:read");
   const dashboardEvents = auditEvents.filter((event) => event.entityType === "dashboard").length;
-  const categoryEvents = auditEvents.filter((event) => event.entityType === "category").length;
 
   return (
     <main className="min-h-screen bg-[oklch(0.968_0.006_240)] text-slate-950">
@@ -81,35 +155,58 @@ export default async function AuditPage() {
         <section className="grid gap-4 md:grid-cols-3">
           <MetricTile label="Events ทั้งหมด" value={auditEvents.length} tone="neutral" />
           <MetricTile label="Events ของ Dashboard" value={dashboardEvents} tone="info" />
-          <MetricTile label="Events ของหมวดหมู่" value={categoryEvents} tone="category" />
+          <MetricTile label="ผลลัพธ์หลังกรอง" value={filteredAuditEvents.length} tone="category" />
         </section>
 
         <FilterShell>
-          <div className="grid gap-3 md:grid-cols-[1fr_200px_200px_140px]">
+          <form className="grid gap-3 xl:grid-cols-[1fr_220px_160px_150px_150px_120px]">
             <label>
               <span className="sr-only">ค้นหา Audit event</span>
               <input
+                name="q"
                 className={`${fieldStyles} h-11 w-full`}
                 placeholder="ค้นหาด้วยผู้ทำรายการ Dashboard หรือหมายเหตุ..."
+                defaultValue={filters.q}
               />
             </label>
-            <select className={`${fieldStyles} h-11 text-slate-700`}>
-              <option>ทุก action</option>
-              <option>dashboard.publish</option>
-              <option>dashboard.submit_review</option>
-              <option>dashboard.update_embed_url</option>
-              <option>category.create_child</option>
+            <select name="action" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.action}>
+              <option value="all">ทุก action</option>
+              {filters.actionOptions.map((action) => (
+                <option key={action} value={action}>
+                  {action}
+                </option>
+              ))}
             </select>
-            <select className={`${fieldStyles} h-11 text-slate-700`}>
-              <option>ทุกประเภทข้อมูล</option>
-              <option>dashboard</option>
-              <option>category</option>
-              <option>permission</option>
+            <select name="entity" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.entity}>
+              <option value="all">ทุกประเภทข้อมูล</option>
+              {entityTypes.map((entityType) => (
+                <option key={entityType} value={entityType}>
+                  {entityType}
+                </option>
+              ))}
             </select>
-            <button className={`${buttonStyles.primary} h-11 justify-center`}>
+            <label>
+              <span className="sr-only">จากวันที่</span>
+              <input
+                name="from"
+                type="date"
+                className={`${fieldStyles} h-11 w-full text-slate-700`}
+                defaultValue={filters.from}
+              />
+            </label>
+            <label>
+              <span className="sr-only">ถึงวันที่</span>
+              <input
+                name="to"
+                type="date"
+                className={`${fieldStyles} h-11 w-full text-slate-700`}
+                defaultValue={filters.to}
+              />
+            </label>
+            <button type="submit" className={`${buttonStyles.primary} h-11 justify-center`}>
               กรอง
             </button>
-          </div>
+          </form>
         </FilterShell>
 
         <TableShell
@@ -126,11 +223,16 @@ export default async function AuditPage() {
                 </tr>
               </thead>
               <tbody>
-                {auditEvents.map((event) => (
+                {filteredAuditEvents.map((event) => (
                   <AuditRow key={event.id} event={event} />
                 ))}
               </tbody>
             </table>
+            {!filteredAuditEvents.length ? (
+              <div className="border-t border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+                ไม่พบ Audit event ที่ตรงกับเงื่อนไขการค้นหา
+              </div>
+            ) : null}
         </TableShell>
       </div>
     </main>
