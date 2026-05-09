@@ -8,6 +8,7 @@ import type { EmbedHealthResult } from "@/lib/embed-policy";
 import type {
   Dashboard,
   DashboardProvider,
+  DashboardStatus,
   RefreshFrequency,
   SensitivityLevel,
 } from "@/lib/portal-types";
@@ -19,6 +20,7 @@ type FormState = {
   provider: DashboardProvider;
   description: string;
   categoryId: string;
+  status: DashboardStatus;
   sensitivity: SensitivityLevel;
   embedUrl: string;
   externalUrl: string;
@@ -33,6 +35,10 @@ type CreatedDashboardResult = {
   id: string;
   title: string;
   status: string;
+};
+
+type CategoryOptionNode = CategoryOption & {
+  children: CategoryOptionNode[];
 };
 
 const providerOptions: DashboardProvider[] = [
@@ -81,11 +87,11 @@ function validateForm(state: FormState, intent: SubmitIntent): FormErrors {
   const errors: FormErrors = {};
 
   if (!state.title.trim()) {
-    errors.title = "กรุณาระบุชื่อ Dashboard";
+    errors.title = "กรุณาระบุชื่อรายงาน";
   }
 
   if (state.description.trim().length < 20) {
-    errors.description = "คำอธิบายควรบอกวัตถุประสงค์ของ Dashboard";
+    errors.description = "คำอธิบายควรบอกวัตถุประสงค์ของรายงาน";
   }
 
   if (!state.categoryId) {
@@ -96,12 +102,12 @@ function validateForm(state: FormState, intent: SubmitIntent): FormErrors {
     errors.embedUrl = "Embed URL ต้องเป็น HTTPS URL ที่ถูกต้อง";
   }
 
-  if (!isHttpsUrl(state.externalUrl)) {
+  if (state.externalUrl.trim() && !isHttpsUrl(state.externalUrl)) {
     errors.externalUrl = "Fallback URL ต้องเป็น HTTPS URL ที่ถูกต้อง";
   }
 
   if (state.sensitivity === "public" && intent === "review" && !state.dataSourceNote.trim()) {
-    errors.dataSourceNote = "Dashboard แบบ Public ต้องระบุที่มา/ข้อจำกัดของข้อมูลก่อนส่งตรวจ";
+    errors.dataSourceNote = "รายงานสาธารณะต้องระบุที่มา/ข้อจำกัดของข้อมูลก่อนส่งตรวจ";
   }
 
   return errors;
@@ -115,34 +121,130 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-2 text-sm font-medium text-rose-700">{message}</p>;
 }
 
+function buildCategoryOptionTree(options: CategoryOption[]): CategoryOptionNode[] {
+  const roots: CategoryOptionNode[] = [];
+  const stack: CategoryOptionNode[] = [];
+
+  for (const option of options) {
+    const node: CategoryOptionNode = { ...option, children: [] };
+
+    while (stack.length && stack[stack.length - 1].depth >= option.depth) {
+      stack.pop();
+    }
+
+    const parent = stack[stack.length - 1];
+
+    if (parent) {
+      parent.children.push(node);
+    } else {
+      roots.push(node);
+    }
+
+    stack.push(node);
+  }
+
+  return roots;
+}
+
+function CategoryTreePicker({
+  options,
+  value,
+  onChange,
+}: {
+  options: CategoryOption[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const tree = useMemo(() => buildCategoryOptionTree(options), [options]);
+
+  function renderNode(node: CategoryOptionNode) {
+    const selected = node.id === value;
+    const content = (
+      <button
+        type="button"
+        className={`w-full rounded-md px-3 py-2 text-left text-sm transition ${
+          selected
+            ? "bg-slate-950 font-semibold text-white"
+            : "bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+        }`}
+        onClick={() => onChange(node.id)}
+      >
+        <span className="block">{node.name}</span>
+      </button>
+    );
+
+    if (!node.children.length) {
+      return (
+        <li key={node.id} className="flex gap-1">
+          <span className="mt-5 h-px w-3 shrink-0 bg-slate-200" aria-hidden="true" />
+          {content}
+        </li>
+      );
+    }
+
+    return (
+      <li key={node.id}>
+        <details open={node.depth === 0 || node.children.some((child) => containsCategoryOption(child, value))}>
+          <summary className="list-none [&::-webkit-details-marker]:hidden">{content}</summary>
+          <ul className="ml-4 mt-1 space-y-1 border-l border-slate-200 pl-2">
+            {node.children.map((child) => renderNode(child))}
+          </ul>
+        </details>
+      </li>
+    );
+  }
+
+  return (
+    <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-2">
+      <ul className="space-y-1">{tree.map((node) => renderNode(node))}</ul>
+    </div>
+  );
+}
+
+function containsCategoryOption(node: CategoryOptionNode, id: string): boolean {
+  return node.id === id || node.children.some((child) => containsCategoryOption(child, id));
+}
+
 export function NewDashboardForm({ categoryOptions }: { categoryOptions: CategoryOption[] }) {
-  return <DashboardMetadataForm categoryOptions={categoryOptions} mode="create" />;
+  return <DashboardMetadataForm categoryOptions={categoryOptions} mode="create" canManageStatus={false} />;
 }
 
 export function EditDashboardForm({
   categoryOptions,
   dashboard,
+  canManageStatus,
 }: {
   categoryOptions: CategoryOption[];
   dashboard: Dashboard;
+  canManageStatus: boolean;
 }) {
-  return <DashboardMetadataForm categoryOptions={categoryOptions} dashboard={dashboard} mode="edit" />;
+  return (
+    <DashboardMetadataForm
+      categoryOptions={categoryOptions}
+      dashboard={dashboard}
+      mode="edit"
+      canManageStatus={canManageStatus}
+    />
+  );
 }
 
 function DashboardMetadataForm({
   categoryOptions,
   dashboard,
   mode,
+  canManageStatus,
 }: {
   categoryOptions: CategoryOption[];
   dashboard?: Dashboard;
   mode: "create" | "edit";
+  canManageStatus: boolean;
 }) {
   const [state, setState] = useState<FormState>({
     title: dashboard?.title ?? "",
     provider: dashboard?.provider ?? "Looker Studio",
     description: dashboard?.description ?? "",
     categoryId: dashboard?.categoryId ?? categoryOptions[0]?.id ?? "",
+    status: dashboard?.status ?? "draft",
     sensitivity: dashboard?.sensitivity ?? "internal",
     embedUrl: dashboard?.embedUrl ?? "",
     externalUrl: dashboard?.externalUrl ?? "",
@@ -236,6 +338,7 @@ function DashboardMetadataForm({
           provider: state.provider,
           description: state.description,
           categoryId: state.categoryId,
+          ...(mode === "edit" && canManageStatus ? { status: state.status } : {}),
           sensitivity: state.sensitivity,
           embedUrl: state.embedUrl,
           externalUrl: state.externalUrl,
@@ -253,7 +356,7 @@ function DashboardMetadataForm({
       if (!response.ok) {
         const message = Array.isArray(payload.errors)
           ? payload.errors.join(", ")
-          : payload.error ?? "ไม่สามารถบันทึก Dashboard ได้";
+          : payload.error ?? "ไม่สามารถบันทึกรายงานได้";
         setSubmitResult(message);
         setSubmitResultType("error");
         return;
@@ -266,12 +369,12 @@ function DashboardMetadataForm({
       });
       setSubmitResult(
         mode === "edit"
-          ? `อัปเดต metadata แล้ว สถานะยังเป็น: ${payload.dashboard.status}`
-          : `บันทึกลง MySQL แล้ว สถานะ: ${payload.dashboard.status}`,
+          ? `อัปเดตข้อมูลกำกับรายงานแล้ว สถานะยังเป็น: ${payload.dashboard.status}`
+          : `บันทึกรายงานแล้ว สถานะ: ${payload.dashboard.status}`,
       );
       setSubmitResultType("success");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "ไม่สามารถบันทึก Dashboard ได้";
+      const message = error instanceof Error ? error.message : "ไม่สามารถบันทึกรายงานได้";
       setSubmitResult(message);
       setSubmitResultType("error");
     } finally {
@@ -280,15 +383,15 @@ function DashboardMetadataForm({
   }
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-slate-50 p-5 shadow-sm">
+    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <div className="border-b border-slate-200 pb-4">
         <h2 className="text-lg font-semibold tracking-tight">
-          {mode === "edit" ? "แก้ไขข้อมูลกำกับ Dashboard" : "ข้อมูลกำกับ Dashboard"}
+          {mode === "edit" ? "แก้ไขข้อมูลกำกับรายงาน" : "ข้อมูลกำกับรายงาน"}
         </h2>
         <p className="mt-1 text-sm text-slate-500">
           {mode === "edit"
-            ? "อัปเดต metadata, URL, หมวดหมู่ และบันทึก audit log ผ่าน API จริง"
-            : "ฟอร์มนี้ตรวจข้อมูลเบื้องต้นและบันทึก Dashboard ลง MySQL ผ่าน API จริง"}
+            ? "อัปเดตข้อมูลกำกับ URL หมวดรายงาน และบันทึกประวัติการเปลี่ยนแปลง"
+            : "ฟอร์มนี้ใช้เพิ่มรายงานเข้าสู่ระบบและบันทึกเป็นฉบับร่างก่อนเผยแพร่"}
         </p>
       </div>
 
@@ -306,7 +409,7 @@ function DashboardMetadataForm({
               href={`/dashboards/${savedDashboard.id}`}
               className="ml-3 underline"
             >
-              เปิด {savedDashboard.title}
+              เปิดรายงาน {savedDashboard.title}
             </a>
           ) : null}
         </div>
@@ -315,7 +418,7 @@ function DashboardMetadataForm({
       <form className="mt-5 space-y-5" onSubmit={(event) => event.preventDefault()}>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">ชื่อ Dashboard</span>
+            <span className="text-sm font-semibold text-slate-700">ชื่อรายงาน</span>
             <input
               className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="เช่น ICU Bed Situation"
@@ -343,7 +446,7 @@ function DashboardMetadataForm({
           <span className="text-sm font-semibold text-slate-700">คำอธิบาย</span>
           <textarea
             className={`${fieldStyles} mt-2 min-h-28 w-full py-3 leading-6`}
-            placeholder="อธิบายว่า dashboard นี้ใช้ตอบคำถามอะไร ใครเป็นผู้รับผิดชอบ และข้อมูลควรถูกใช้อย่างไร"
+            placeholder="อธิบายว่ารายงานนี้ใช้ตอบคำถามอะไร ใครเป็นผู้รับผิดชอบ และข้อมูลควรถูกใช้อย่างไร"
             value={state.description}
             onChange={(event) => updateField("description", event.target.value)}
           />
@@ -352,19 +455,17 @@ function DashboardMetadataForm({
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">หมวดหมู่ที่มีสิทธิ์</span>
-            <select
-              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
+            <span className="text-sm font-semibold text-slate-700">หมวดรายงานที่มีสิทธิ์</span>
+            <input
+              type="hidden"
               value={state.categoryId}
-              onChange={(event) => updateField("categoryId", event.target.value)}
-            >
-              {categoryOptions.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {"- ".repeat(category.depth)}
-                  {category.name}
-                </option>
-              ))}
-            </select>
+              onChange={() => undefined}
+            />
+            <CategoryTreePicker
+              options={categoryOptions}
+              value={state.categoryId}
+              onChange={(categoryId) => updateField("categoryId", categoryId)}
+            />
             <FieldError message={errors.categoryId} />
           </label>
           <label className="block">
@@ -381,9 +482,27 @@ function DashboardMetadataForm({
           </label>
         </div>
 
+        {mode === "edit" && canManageStatus ? (
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">สถานะรายงาน</span>
+            <select
+              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
+              value={state.status}
+              onChange={(event) => updateField("status", event.target.value as DashboardStatus)}
+            >
+              <option value="draft">ร่าง</option>
+              <option value="published">เผยแพร่แล้ว</option>
+              <option value="archived">เก็บถาวร</option>
+            </select>
+            <p className="mt-2 text-sm text-slate-500">
+              ใช้เผยแพร่หรือเก็บถาวรรายงานโดยตรง ในช่วงที่ยังไม่ใช้คิวตรวจสอบ
+            </p>
+          </label>
+        ) : null}
+
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Embed URL</span>
+            <span className="text-sm font-semibold text-slate-700">Embed URL ของรายงาน</span>
             <input
               className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="https://..."
@@ -393,7 +512,9 @@ function DashboardMetadataForm({
             <FieldError message={errors.embedUrl} />
           </label>
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">External fallback URL</span>
+            <span className="text-sm font-semibold text-slate-700">
+              URL สำหรับเปิดภายนอก <span className="font-normal text-slate-400">(ไม่บังคับ)</span>
+            </span>
             <input
               className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="https://..."
@@ -429,7 +550,7 @@ function DashboardMetadataForm({
         </div>
 
         <label className="block">
-          <span className="text-sm font-semibold text-slate-700">หมายเหตุแหล่งข้อมูล</span>
+          <span className="text-sm font-semibold text-slate-700">แหล่งข้อมูลและข้อจำกัด</span>
           <textarea
             className={`${fieldStyles} mt-2 min-h-24 w-full py-3 leading-6`}
             placeholder="ระบุแหล่งข้อมูล เงื่อนไขการตีความ หรือข้อจำกัดที่ผู้ใช้งานควรรู้"
@@ -442,7 +563,7 @@ function DashboardMetadataForm({
         <section className="overflow-hidden rounded-lg border border-slate-200">
           <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-slate-800">ตัวอย่าง Embed</h3>
+              <h3 className="text-sm font-semibold text-slate-800">ตัวอย่างการแสดงรายงาน</h3>
               <p className="mt-1 text-sm text-slate-500">{embedAssessment.reason}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -457,7 +578,7 @@ function DashboardMetadataForm({
                 disabled={!previewUrl || isCheckingHealth}
                 onClick={checkEmbedHealth}
               >
-                {isCheckingHealth ? "กำลังตรวจ..." : "ตรวจ Embed health"}
+                {isCheckingHealth ? "กำลังตรวจ..." : "ตรวจการฝังรายงาน"}
               </button>
             </div>
           </div>
@@ -501,7 +622,7 @@ function DashboardMetadataForm({
           ) : null}
           {previewUrl && embedAssessment.status !== "external_only" ? (
             <iframe
-              title="New dashboard embed preview"
+              title="Report embed preview"
               src={previewUrl}
               className="h-80 w-full bg-slate-50"
               allowFullScreen
@@ -526,24 +647,14 @@ function DashboardMetadataForm({
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-5">
           {mode === "create" ? (
-            <>
-              <button
-                type="button"
-                className={`${buttonStyles.secondary} h-10`}
-                disabled={isSubmitting}
-                onClick={() => handleSubmit("draft")}
-              >
-                {isSubmitting ? "กำลังบันทึก..." : "บันทึกฉบับร่าง"}
-              </button>
-              <button
-                type="button"
-                className={`${buttonStyles.primary} h-10`}
-                disabled={isSubmitting}
-                onClick={() => handleSubmit("review")}
-              >
-                {isSubmitting ? "กำลังบันทึก..." : "ส่งตรวจสอบ"}
-              </button>
-            </>
+            <button
+              type="button"
+              className={`${buttonStyles.primary} h-10`}
+              disabled={isSubmitting}
+              onClick={() => handleSubmit("draft")}
+            >
+              {isSubmitting ? "กำลังบันทึก..." : "บันทึกฉบับร่าง"}
+            </button>
           ) : (
             <button
               type="button"

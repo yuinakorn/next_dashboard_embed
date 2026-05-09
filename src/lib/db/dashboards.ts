@@ -19,6 +19,7 @@ type DashboardRow = RowDataPacket & {
   category_id: string;
   category_name: string;
   parent_category_name: string | null;
+  category_path: string | null;
   owner_user_id: string;
   owner_team_id: string;
   owner_name: string;
@@ -68,6 +69,7 @@ export type UpdateDashboardInput = {
   description: string;
   provider: DashboardProvider;
   categoryId: string;
+  status?: DashboardStatus;
   sensitivity: SensitivityLevel;
   embedUrl: string;
   externalUrl: string;
@@ -86,7 +88,10 @@ export type DashboardLifecycleInput = {
 };
 
 function rowToDashboard(row: DashboardRow): Dashboard {
-  const categoryName = row.parent_category_name
+  const categoryPath = row.category_path?.split(" / ").filter(Boolean) ?? [];
+  const categoryName = categoryPath.length
+    ? categoryPath.join(" / ")
+    : row.parent_category_name
     ? `${row.parent_category_name} / ${row.category_name}`
     : row.category_name;
 
@@ -97,6 +102,7 @@ function rowToDashboard(row: DashboardRow): Dashboard {
     provider: row.provider,
     categoryId: row.category_id,
     categoryName,
+    categoryPath: categoryPath.length ? categoryPath : undefined,
     ownerUserId: row.owner_user_id,
     owner: row.owner_name,
     ownerTeamId: row.owner_team_id,
@@ -120,6 +126,7 @@ async function queryDashboards(
   userId: string,
   options: {
     includeArchived?: boolean;
+    publishedOnly?: boolean;
     publicOnly?: boolean;
   } = {},
 ): Promise<Dashboard[]> {
@@ -133,6 +140,13 @@ async function queryDashboards(
         d.category_id,
         c.name AS category_name,
         pc.name AS parent_category_name,
+        (
+          SELECT GROUP_CONCAT(cp.name ORDER BY cpc.depth DESC SEPARATOR ' / ')
+          FROM portal_category_closure cpc
+          JOIN portal_categories cp
+            ON cp.id = cpc.ancestor_id
+          WHERE cpc.descendant_id = d.category_id
+        ) AS category_path,
         d.owner_user_id,
         d.owner_team_id,
         d.owner_name,
@@ -148,7 +162,7 @@ async function queryDashboards(
         d.embed_status_reason,
         d.refresh_frequency,
         d.data_source_note,
-        GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ',') AS tags
+        GROUP_CONCAT(DISTINCT t.name ORDER BY t.name SEPARATOR ',') AS tags
       FROM portal_dashboards d
       JOIN portal_categories c ON c.id = d.category_id
       LEFT JOIN portal_categories pc ON pc.id = c.parent_id
@@ -158,6 +172,7 @@ async function queryDashboards(
       LEFT JOIN portal_dashboard_tags dt ON dt.dashboard_id = d.id
       LEFT JOIN portal_tags t ON t.id = dt.tag_id
       WHERE (:includeArchived = TRUE OR d.status <> 'archived')
+        AND (:publishedOnly = FALSE OR d.status = 'published')
         AND (:publicOnly = FALSE OR (d.status = 'published' AND d.sensitivity = 'public'))
       GROUP BY
         d.id, d.title, d.description, d.provider, d.category_id, c.name, pc.name, d.owner_user_id,
@@ -169,6 +184,7 @@ async function queryDashboards(
     {
       userId,
       includeArchived: Boolean(options.includeArchived),
+      publishedOnly: Boolean(options.publishedOnly),
       publicOnly: Boolean(options.publicOnly),
     },
   );
@@ -184,9 +200,45 @@ export async function listPublicDashboards(): Promise<Dashboard[]> {
   return queryDashboards("public", { publicOnly: true });
 }
 
+export async function listPublishedDashboardsForPortal(): Promise<Dashboard[]> {
+  return queryDashboards("public", { publishedOnly: true });
+}
+
+export async function getPublicDashboard(id: string): Promise<Dashboard | null> {
+  const dashboards = await queryDashboards("public", { publicOnly: true });
+  return dashboards.find((dashboard) => dashboard.id === id) ?? null;
+}
+
 export async function getDashboard(id: string, userId: string): Promise<Dashboard | null> {
   const dashboards = await queryDashboards(userId, { includeArchived: true });
   return dashboards.find((dashboard) => dashboard.id === id) ?? null;
+}
+
+export async function recordDashboardView(id: string): Promise<void> {
+  await getDbPool().query("UPDATE portal_dashboards SET views = views + 1 WHERE id = :id", { id });
+}
+
+export async function setDashboardFavorite({
+  dashboardId,
+  userId,
+  favorite,
+}: {
+  dashboardId: string;
+  userId: string;
+  favorite: boolean;
+}): Promise<void> {
+  if (favorite) {
+    await getDbPool().query(
+      "INSERT IGNORE INTO portal_favorites (user_id, dashboard_id) VALUES (:userId, :dashboardId)",
+      { userId, dashboardId },
+    );
+    return;
+  }
+
+  await getDbPool().query(
+    "DELETE FROM portal_favorites WHERE user_id = :userId AND dashboard_id = :dashboardId",
+    { userId, dashboardId },
+  );
 }
 
 async function getDashboardForUpdate(
@@ -376,6 +428,8 @@ export async function updateDashboard(input: UpdateDashboardInput): Promise<Dash
           description = :description,
           provider = :provider,
           category_id = :categoryId,
+          status = :status,
+          published_at = CASE WHEN :status = 'published' AND published_at IS NULL THEN CURRENT_TIMESTAMP ELSE published_at END,
           sensitivity = :sensitivity,
           embed_url = :embedUrl,
           external_url = :externalUrl,
@@ -391,6 +445,7 @@ export async function updateDashboard(input: UpdateDashboardInput): Promise<Dash
         description: input.description,
         provider: input.provider,
         categoryId: input.categoryId,
+        status: input.status ?? before.status,
         sensitivity: input.sensitivity,
         embedUrl: input.embedUrl,
         externalUrl: input.externalUrl,
@@ -440,7 +495,7 @@ export async function updateDashboard(input: UpdateDashboardInput): Promise<Dash
           description: input.description,
           provider: input.provider,
           categoryId: input.categoryId,
-          status: before.status,
+          status: input.status ?? before.status,
           sensitivity: input.sensitivity,
           embedUrl: input.embedUrl,
           externalUrl: input.externalUrl,

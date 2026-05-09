@@ -1,10 +1,17 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/dashboard-ui";
+import { buttonStyles } from "@/components/dashboard-ui";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { flattenCategories } from "@/lib/category-utils";
 import { listCategories } from "@/lib/db/categories";
 import { getDashboard } from "@/lib/db/dashboards";
-import { canCreateDashboard, canUpdateDashboard, getUserPermissions } from "@/lib/permissions";
+import {
+  canArchiveDashboard,
+  canCreateDashboard,
+  canPublishDashboard,
+  canUpdateDashboard,
+  getUserPermissions,
+} from "@/lib/permissions";
 import { EditDashboardForm } from "../../new/new-dashboard-form";
 
 type EditDashboardPageProps = {
@@ -27,44 +34,81 @@ export default async function EditDashboardPage({ params }: EditDashboardPagePro
   const categoryOptions = flattenCategories(categories).filter(
     (category) => category.id === dashboard.categoryId || canCreateDashboard(currentUser, category.id),
   );
+  const canManageStatus =
+    canPublishDashboard(currentUser, dashboard) || canArchiveDashboard(currentUser, dashboard);
 
   return (
     <main className="min-h-screen bg-[oklch(0.968_0.006_240)] text-slate-950">
-      <PageHeader
-        eyebrow="แก้ไขรายการ"
-        title={dashboard.title}
-        description="แก้ metadata, URL และ governance context ของ Dashboard"
-        maxWidth="max-w-5xl"
-        actions={[
-          { href: `/dashboards/${dashboard.id}`, label: "กลับไป Viewer" },
-          { href: "/catalog", label: "Catalog", primary: true },
-        ]}
-      />
+      <div className="mx-auto max-w-7xl px-5 pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <nav aria-label="breadcrumb">
+            <ol className="flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+              <li>
+                <Link href="/catalog" className="hover:text-slate-900 hover:underline">
+                  รายการรายงาน
+                </Link>
+              </li>
+              <li aria-hidden="true" className="text-slate-300">/</li>
+              <li>
+                <Link
+                  href={`/dashboards/${dashboard.id}`}
+                  className="hover:text-slate-900 hover:underline truncate max-w-[40vw] inline-block align-bottom"
+                >
+                  {dashboard.title}
+                </Link>
+              </li>
+              <li aria-hidden="true" className="text-slate-300">/</li>
+              <li aria-current="page" className="font-medium text-slate-700">
+                แก้ไข
+              </li>
+            </ol>
+          </nav>
+          <Link
+            href={`/dashboards/${dashboard.id}`}
+            className={`${buttonStyles.secondary} h-9 px-3 text-xs`}
+          >
+            ยกเลิก
+          </Link>
+        </div>
+        <div className="mt-3">
+          <span className="text-xs font-medium text-slate-500">แก้ไขรายงาน</span>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-950 md:text-2xl">
+            {dashboard.title}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            แก้ข้อมูลกำกับรายงาน URL หมวดรายงาน และสิทธิ์การเข้าถึง
+          </p>
+        </div>
+      </div>
 
-      <div className="mx-auto grid max-w-5xl gap-6 px-5 py-6 lg:grid-cols-[1fr_280px]">
-        <EditDashboardForm categoryOptions={categoryOptions} dashboard={dashboard} />
+      <div className="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[1fr_280px]">
+        <EditDashboardForm
+          categoryOptions={categoryOptions}
+          dashboard={dashboard}
+          canManageStatus={canManageStatus}
+        />
 
         <aside className="space-y-4">
-          <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-950">สถานะปัจจุบัน</h2>
             <dl className="mt-3 space-y-3 text-sm">
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</dt>
+                <dt className="text-xs font-semibold text-slate-500">สถานะ</dt>
                 <dd className="mt-1 font-semibold text-slate-900">{dashboard.status}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Owner</dt>
+                <dt className="text-xs font-semibold text-slate-500">เจ้าของรายงาน</dt>
                 <dd className="mt-1 font-semibold text-slate-900">{dashboard.owner}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</dt>
+                <dt className="text-xs font-semibold text-slate-500">อัปเดตล่าสุด</dt>
                 <dd className="mt-1 font-semibold text-slate-900">{dashboard.updatedAt}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-950">หมวดหมู่ที่เลือกได้</h2>
+          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-950">หมวดรายงานที่เลือกได้</h2>
             <div className="mt-3 space-y-2">
               {categoryOptions.map((category) => (
                 <div
@@ -78,7 +122,7 @@ export default async function EditDashboardPage({ params }: EditDashboardPagePro
             </div>
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-950">สิทธิ์ที่มีในขณะนี้</h2>
             <div className="mt-3 flex flex-wrap gap-2">
               {permissions.map((permission) => (

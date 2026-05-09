@@ -9,14 +9,20 @@ export default async function PortalLayout({
   children: React.ReactNode;
 }) {
   const currentUser = await requireCurrentUser();
+  const canReadAudit = hasPermission(currentUser, "audit:read");
+  const navItems = [
+    { label: "หน้าหลัก", href: "/" },
+    { label: "รายงาน", href: "/catalog" },
+    ...(canReadAudit ? [{ label: "ประวัติ Audit", href: "/audit" }] : []),
+  ];
   const extraNavItems = [
     ...(hasPermission(currentUser, "permission:manage")
-      ? [{ label: "Users", href: "/admin/users" }]
+      ? [{ label: "ผู้ใช้งาน", href: "/admin/users" }]
       : []),
     ...(hasPermission(currentUser, "category:update") ||
     hasPermission(currentUser, "category:create_root") ||
     hasPermission(currentUser, "category:create_child")
-      ? [{ label: "Categories", href: "/admin/categories" }]
+      ? [{ label: "หมวดรายงาน", href: "/admin/categories" }]
       : []),
   ];
 
@@ -24,15 +30,30 @@ export default async function PortalLayout({
     <>
       <AppNavbar
         userName={currentUser.name}
-        userTitle={`${currentUser.title} · ${currentUser.department}`}
+        userTitle={
+          currentUser.impersonatedBy
+            ? `สลับจาก ${currentUser.impersonatedBy.name} · ${currentUser.title} · ${currentUser.department}`
+            : `${currentUser.title} · ${currentUser.department}`
+        }
+        navItems={navItems}
         extraNavItems={extraNavItems}
         actions={
-          <a
-            href="/api/auth/logout"
-            className={`${buttonStyles.secondary} h-9 px-3 text-xs`}
-          >
-            ออกจากระบบ
-          </a>
+          <div className="flex items-center gap-2">
+            {currentUser.impersonatedBy ? (
+              <a
+                href="/api/admin/impersonation/stop"
+                className={`${buttonStyles.primary} h-9 px-3 text-xs`}
+              >
+                กลับเป็นตัวเอง
+              </a>
+            ) : null}
+            <a
+              href="/api/auth/logout"
+              className={`${buttonStyles.secondary} h-9 px-3 text-xs`}
+            >
+              ออกจากระบบ
+            </a>
+          </div>
         }
       />
       {children}

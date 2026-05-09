@@ -11,6 +11,11 @@ type CategoryRow = RowDataPacket & {
   dashboard_count: number;
 };
 
+type PortalCategoryRow = CategoryRow & {
+  public_report_count: number;
+  login_required_report_count: number;
+};
+
 type ManagedCategoryRow = CategoryRow & {
   status: CategoryStatus;
   sort_order: number;
@@ -32,16 +37,51 @@ export type ManagedCategory = {
   updatedAt: string;
 };
 
-function buildCategoryTree(rows: CategoryRow[], parentId: string | null = null): Category[] {
+export type PortalCategory = Omit<Category, "children"> & {
+  publicReportCount: number;
+  loginRequiredReportCount: number;
+  totalPublishedReportCount: number;
+  children?: PortalCategory[];
+};
+
+function buildCategoryTree(rows: CategoryRow[], parentId: string | null = null, path: string[] = []): Category[] {
   return rows
     .filter((row) => row.parent_id === parentId)
     .map((row) => ({
       id: row.id,
       name: row.name,
+      parentId: row.parent_id,
       ownerTeamId: row.owner_team_id,
       dashboardCount: row.dashboard_count,
-      children: buildCategoryTree(rows, row.id),
+      depth: path.length,
+      path: [...path, row.name],
+      children: buildCategoryTree(rows, row.id, [...path, row.name]),
     }));
+}
+
+function buildPortalCategoryTree(
+  rows: PortalCategoryRow[],
+  parentId: string | null = null,
+  path: string[] = [],
+): PortalCategory[] {
+  return rows
+    .filter((row) => row.parent_id === parentId)
+    .map((row) => {
+      const nextPath = [...path, row.name];
+      return {
+        id: row.id,
+        name: row.name,
+        parentId: row.parent_id,
+        ownerTeamId: row.owner_team_id,
+        dashboardCount: row.dashboard_count,
+        publicReportCount: row.public_report_count,
+        loginRequiredReportCount: row.login_required_report_count,
+        totalPublishedReportCount: row.public_report_count + row.login_required_report_count,
+        depth: path.length,
+        path: nextPath,
+        children: buildPortalCategoryTree(rows, row.id, nextPath),
+      };
+    });
 }
 
 export async function listCategories(): Promise<Category[]> {
@@ -52,10 +92,12 @@ export async function listCategories(): Promise<Category[]> {
         c.name,
         c.parent_id,
         c.owner_team_id,
-        COUNT(d.id) AS dashboard_count
+        COUNT(DISTINCT d.id) AS dashboard_count
       FROM portal_categories c
+      LEFT JOIN portal_category_closure cc
+        ON cc.ancestor_id = c.id
       LEFT JOIN portal_dashboards d
-        ON d.category_id = c.id
+        ON d.category_id = cc.descendant_id
         AND d.status <> 'archived'
       WHERE c.status = 'active'
       GROUP BY c.id, c.name, c.parent_id, c.owner_team_id, c.sort_order
@@ -64,6 +106,31 @@ export async function listCategories(): Promise<Category[]> {
   );
 
   return buildCategoryTree(rows);
+}
+
+export async function listPortalCategories(): Promise<PortalCategory[]> {
+  const [rows] = await getDbPool().query<PortalCategoryRow[]>(
+    `
+      SELECT
+        c.id,
+        c.name,
+        c.parent_id,
+        c.owner_team_id,
+        COUNT(DISTINCT CASE WHEN d.status = 'published' THEN d.id END) AS dashboard_count,
+        COUNT(DISTINCT CASE WHEN d.status = 'published' AND d.sensitivity = 'public' THEN d.id END) AS public_report_count,
+        COUNT(DISTINCT CASE WHEN d.status = 'published' AND d.sensitivity <> 'public' THEN d.id END) AS login_required_report_count
+      FROM portal_categories c
+      LEFT JOIN portal_category_closure cc
+        ON cc.ancestor_id = c.id
+      LEFT JOIN portal_dashboards d
+        ON d.category_id = cc.descendant_id
+      WHERE c.status = 'active'
+      GROUP BY c.id, c.name, c.parent_id, c.owner_team_id, c.sort_order
+      ORDER BY c.sort_order ASC, c.name ASC
+    `,
+  );
+
+  return buildPortalCategoryTree(rows);
 }
 
 function rowToManagedCategory(row: ManagedCategoryRow): ManagedCategory {
@@ -94,10 +161,12 @@ export async function listManagedCategories(): Promise<ManagedCategory[]> {
         c.created_by,
         c.created_at,
         c.updated_at,
-        COUNT(d.id) AS dashboard_count
+        COUNT(DISTINCT d.id) AS dashboard_count
       FROM portal_categories c
+      LEFT JOIN portal_category_closure cc
+        ON cc.ancestor_id = c.id
       LEFT JOIN portal_dashboards d
-        ON d.category_id = c.id
+        ON d.category_id = cc.descendant_id
         AND d.status <> 'archived'
       GROUP BY
         c.id,
@@ -163,6 +232,21 @@ export async function createManagedCategory({
       },
     );
     await connection.query(
+      "INSERT IGNORE INTO portal_category_closure (ancestor_id, descendant_id, depth) VALUES (:id, :id, 0)",
+      { id },
+    );
+    if (parentId) {
+      await connection.query(
+        `
+          INSERT IGNORE INTO portal_category_closure (ancestor_id, descendant_id, depth)
+          SELECT ancestor_id, :id, depth + 1
+          FROM portal_category_closure
+          WHERE descendant_id = :parentId
+        `,
+        { id, parentId },
+      );
+    }
+    await connection.query(
       `
         INSERT INTO portal_audit_logs (
           id,
@@ -184,7 +268,7 @@ export async function createManagedCategory({
           :entityId,
           :entityTitle,
           :note,
-          CAST(:afterJson AS JSON)
+          :afterJson
         )
       `,
       {
@@ -270,8 +354,8 @@ export async function updateManagedCategory({
           :entityId,
           :entityTitle,
           :note,
-          CAST(:beforeJson AS JSON),
-          CAST(:afterJson AS JSON)
+          :beforeJson,
+          :afterJson
         )
       `,
       {

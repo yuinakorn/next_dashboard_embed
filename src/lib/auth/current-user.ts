@@ -1,8 +1,14 @@
 import { cookies, headers } from "next/headers";
 import { getMockCurrentUser, userFromJwtPayload } from "@/lib/mock-auth";
 import type { MockJwtPayload, PortalUser } from "@/lib/portal-types";
-import { portalSessionCookieName, readPortalSession } from "@/lib/auth/sso-session";
+import {
+  portalImpersonationCookieName,
+  portalSessionCookieName,
+  readPortalImpersonation,
+  readPortalSession,
+} from "@/lib/auth/sso-session";
 import { getManagedUser } from "@/lib/db/users";
+import { hasPermission } from "@/lib/permissions";
 
 type AuthMode = "dev" | "trusted-header" | "sso-session";
 
@@ -55,7 +61,7 @@ async function applyStoredPermissions(user: PortalUser): Promise<PortalUser> {
   }
 }
 
-export async function getCurrentUser(): Promise<PortalUser> {
+export async function getCurrentBaseUser(): Promise<PortalUser> {
   const authMode = getAuthMode();
 
   if (authMode === "dev") {
@@ -85,4 +91,19 @@ export async function getCurrentUser(): Promise<PortalUser> {
   }
 
   throw new AuthRequiredError("Missing or expired SSO session.");
+}
+
+export async function getCurrentUser(): Promise<PortalUser> {
+  const baseUser = await getCurrentBaseUser();
+  const cookieStore = await cookies();
+  const impersonation = readPortalImpersonation(cookieStore.get(portalImpersonationCookieName)?.value);
+
+  if (!impersonation || impersonation.actor.id !== baseUser.id || !hasPermission(baseUser, "permission:manage")) {
+    return baseUser;
+  }
+
+  return {
+    ...impersonation.user,
+    impersonatedBy: impersonation.actor,
+  };
 }

@@ -12,8 +12,7 @@ type NavItem = {
 
 const defaultNavItems: NavItem[] = [
   { label: "หน้าหลัก", href: "/" },
-  { label: "Catalog", href: "/catalog" },
-  { label: "คิวตรวจสอบ", href: "/review" },
+  { label: "รายงาน", href: "/catalog" },
   { label: "ประวัติ Audit", href: "/audit" },
 ];
 
@@ -21,44 +20,42 @@ function isActiveRoute(pathname: string, href: string): boolean {
   if (href === "/") {
     return pathname === "/";
   }
-
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function HamburgerIcon() {
   return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M3 5h14M3 10h14M3 15h14"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
 
 function CloseIcon() {
   return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ open }: { open: boolean }) {
+  return (
     <svg
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
       fill="none"
       aria-hidden="true"
+      className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
     >
-      <path
-        d="M5 5l10 10M15 5L5 15"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      <path d="M2.5 5l4.5 4.5L11.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -67,49 +64,50 @@ export function AppNavbar({
   userName,
   userTitle,
   actions,
+  navItems: navItemsProp,
   extraNavItems = [],
 }: {
   userName: string;
   userTitle: string;
   actions?: ReactNode;
+  navItems?: NavItem[];
   extraNavItems?: NavItem[];
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const navItems = [...defaultNavItems, ...extraNavItems];
+  const [profileOpen, setProfileOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const navItems = [...(navItemsProp ?? defaultNavItems), ...extraNavItems];
+  const initials = getInitials(userName);
 
-  // Close on click outside
   useEffect(() => {
-    if (!mobileOpen) return;
-
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (mobileOpen && navRef.current && !navRef.current.contains(event.target as Node)) {
         setMobileOpen(false);
       }
+      if (profileOpen && profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [mobileOpen]);
+  }, [mobileOpen, profileOpen]);
 
-  // Close on Escape
   useEffect(() => {
-    if (!mobileOpen) return;
-
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setMobileOpen(false);
+        setProfileOpen(false);
       }
     }
-
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [mobileOpen]);
+  }, []);
 
   return (
     <nav
-      ref={menuRef}
+      ref={navRef}
       className="sticky top-0 z-50 border-b border-slate-200 bg-slate-50/95 backdrop-blur-sm"
       aria-label="Main navigation"
     >
@@ -121,8 +119,8 @@ export function AppNavbar({
             className="flex flex-col rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
           >
             <span className="flex items-center gap-2">
-              <span className="text-base font-semibold tracking-tight text-slate-950">Dashboard Hub</span>
-              <span className="text-sm font-medium text-[#005f80]">Open Data</span>
+              <span className="text-base font-semibold tracking-tight text-slate-950">Health Report Portal</span>
+              <span className="text-sm font-medium text-[#005f80]">CM PHO</span>
             </span>
             <span className="text-[11px] text-slate-500">สำนักงานสาธารณสุขจังหวัดเชียงใหม่</span>
           </Link>
@@ -131,7 +129,6 @@ export function AppNavbar({
           <ul className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => {
               const active = isActiveRoute(pathname, item.href);
-
               return (
                 <li key={item.href}>
                   <Link
@@ -150,15 +147,51 @@ export function AppNavbar({
             })}
           </ul>
 
-          {/* Desktop right side: user + actions */}
-          <div className="hidden items-center gap-3 md:flex">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-slate-800">
-                {userName}
-              </p>
-              <p className="text-xs text-slate-500">{userTitle}</p>
+          {/* Desktop right side: profile dropdown */}
+          <div className="hidden md:flex items-center" ref={profileRef}>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileOpen((prev) => !prev)}
+                aria-expanded={profileOpen}
+                aria-haspopup="true"
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition duration-150 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white select-none">
+                  {initials}
+                </span>
+                <span className="text-left">
+                  <span className="block text-sm font-semibold text-slate-800 leading-tight">{userName}</span>
+                  <span className="block text-xs text-slate-500 leading-tight max-w-[200px] truncate">{userTitle}</span>
+                </span>
+                <ChevronDownIcon open={profileOpen} />
+              </button>
+
+              {/* Dropdown panel */}
+              {profileOpen && (
+                <div className="absolute right-0 top-full mt-2 w-72 origin-top-right rounded-xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+                  {/* User info header */}
+                  <div className="flex items-start gap-3 px-4 py-3 border-b border-slate-100">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-800 text-sm font-bold text-white select-none">
+                      {initials}
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 break-words">{userName}</p>
+                      <p className="text-xs text-slate-500 break-words">{userTitle}</p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  {actions && (
+                    <div className="p-2">
+                      <div className="[&>*]:w-full [&>*]:justify-start [&>*]:rounded-lg [&>*]:px-3 [&>*]:py-2 [&>*]:text-sm">
+                        {actions}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            {actions}
           </div>
 
           {/* Mobile hamburger */}
@@ -179,13 +212,12 @@ export function AppNavbar({
       <div
         id="mobile-nav-menu"
         className={`overflow-hidden border-t border-slate-200 transition-all duration-200 ease-out md:hidden ${
-          mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0 border-t-0"
+          mobileOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0 border-t-0"
         }`}
       >
         <div className="mx-auto max-w-7xl space-y-1 px-5 py-3">
           {navItems.map((item) => {
             const active = isActiveRoute(pathname, item.href);
-
             return (
               <Link
                 key={item.href}
@@ -204,14 +236,17 @@ export function AppNavbar({
           })}
 
           <div className="border-t border-slate-200 pt-3 mt-2">
-            <div className="px-3 py-2">
-              <p className="text-sm font-semibold text-slate-800">
-                {userName}
-              </p>
-              <p className="text-xs text-slate-500">{userTitle}</p>
+            <div className="flex items-center gap-3 px-3 py-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800 text-sm font-bold text-white select-none">
+                {initials}
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{userName}</p>
+                <p className="text-xs text-slate-500 truncate">{userTitle}</p>
+              </div>
             </div>
             {actions ? (
-              <div className="flex px-3 py-2">{actions}</div>
+              <div className="flex flex-col gap-1 px-3 py-2">{actions}</div>
             ) : null}
           </div>
         </div>

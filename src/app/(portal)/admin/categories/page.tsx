@@ -27,12 +27,12 @@ export default async function AdminCategoriesPage() {
   return (
     <main className="min-h-screen bg-[oklch(0.968_0.006_240)] text-slate-950">
       <PageHeader
-        eyebrow="Admin"
-        title="จัดการหมวดหมู่"
-        description="ดูแล category tree, owner team, sort order และสถานะการใช้งานของ Dashboard Hub"
+        eyebrow="ดูแลระบบ"
+        title="จัดการหมวดรายงาน"
+        description="ดูแลโครงสร้างหมวดรายงานแบบหลายชั้น เจ้าของหมวด ลำดับแสดงผล และสถานะการใช้งาน"
         actions={[
-          { href: "/admin/users", label: "Users" },
-          { href: "/audit", label: "Audit log" },
+          { href: "/admin/users", label: "ผู้ใช้งาน" },
+          { href: "/audit", label: "ประวัติ Audit" },
           { href: "/", label: "หน้าหลัก", primary: true },
         ]}
       />

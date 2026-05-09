@@ -51,13 +51,20 @@ export type PortalUser = {
   teamId: string;
   roles: PortalRole[];
   scopes: TeamScope[];
+  impersonatedBy?: {
+    id: string;
+    name: string;
+  };
 };
 
 export type Category = {
   id: string;
   name: string;
+  parentId?: string | null;
   ownerTeamId: string;
   dashboardCount: number;
+  depth?: number;
+  path?: string[];
   children?: Category[];
 };
 
@@ -68,6 +75,7 @@ export type Dashboard = {
   provider: DashboardProvider;
   categoryId: string;
   categoryName: string;
+  categoryPath?: string[];
   ownerUserId: string;
   owner: string;
   ownerTeamId: string;

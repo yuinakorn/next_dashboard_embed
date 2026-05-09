@@ -1,13 +1,14 @@
-import { buttonStyles, fieldStyles, focusRing } from "@/components/dashboard-ui";
+import { buttonStyles, focusRing } from "@/components/dashboard-ui";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listCategories } from "@/lib/db/categories";
 import { listDashboards } from "@/lib/db/dashboards";
+import { hasPermission } from "@/lib/permissions";
 import type {
   Category,
   Dashboard,
   DashboardProvider,
   DashboardStatus,
-  EmbedStatus,
+  PortalUser,
   SensitivityLevel,
 } from "@/lib/portal-types";
 import Link from "next/link";
@@ -31,11 +32,11 @@ const statusStyles: Record<DashboardStatus, string> = {
 };
 
 const statusLabels: Record<DashboardStatus, string> = {
-  draft: "Draft",
-  in_review: "In review",
-  published: "Published",
-  rejected: "Rejected",
-  archived: "Archived",
+  draft: "ร่าง",
+  in_review: "รอตรวจสอบ",
+  published: "เผยแพร่แล้ว",
+  rejected: "ตีกลับ",
+  archived: "เก็บถาวร",
 };
 
 const sensitivityStyles: Record<SensitivityLevel, string> = {
@@ -46,27 +47,29 @@ const sensitivityStyles: Record<SensitivityLevel, string> = {
 };
 
 const sensitivityLabels: Record<SensitivityLevel, string> = {
-  public: "Public",
-  internal: "Internal",
-  confidential: "Confidential",
-  restricted: "Restricted",
+  public: "สาธารณะ",
+  internal: "ต้องเข้าสู่ระบบ",
+  confidential: "ภายในหน่วยงาน",
+  restricted: "จำกัดสิทธิ์",
 };
 
-const embedStyles: Record<EmbedStatus, string> = {
-  embeddable: "bg-emerald-50 text-emerald-800",
-  unknown: "bg-amber-50 text-amber-900",
-  external_only: "bg-rose-50 text-rose-800",
-  blocked: "bg-rose-100 text-rose-900",
-};
+type HomeMode = "viewer" | "creator" | "reviewer" | "admin";
 
-const embedLabels: Record<EmbedStatus, string> = {
-  embeddable: "Embed OK",
-  unknown: "Need check",
-  external_only: "Fallback",
-  blocked: "Blocked",
-};
+function getHomeMode(user: PortalUser): HomeMode {
+  if (hasPermission(user, "permission:manage")) {
+    return "admin";
+  }
 
+  if (hasPermission(user, "dashboard:publish") || hasPermission(user, "dashboard:approve")) {
+    return "reviewer";
+  }
 
+  if (hasPermission(user, "dashboard:create")) {
+    return "creator";
+  }
+
+  return "viewer";
+}
 
 function uniqueDashboards(dashboards: Dashboard[]) {
   return dashboards.filter(
@@ -75,424 +78,350 @@ function uniqueDashboards(dashboards: Dashboard[]) {
   );
 }
 
+function isActionableForUser(user: PortalUser, dashboard: Dashboard) {
+  if (hasPermission(user, "category:create_root")) {
+    return true;
+  }
+
+  if (dashboard.ownerTeamId === user.teamId) {
+    return true;
+  }
+
+  return dashboard.ownerUserId === user.id;
+}
+
 function Badge({ children, className }: { children: ReactNode; className: string }) {
   return (
-    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${className}`}>
+    <span className={`inline-flex w-fit items-center rounded-md px-2 py-1 text-xs font-semibold ${className}`}>
       {children}
     </span>
   );
 }
 
-function WorkMetric({
+function MetricCard({
   label,
   value,
   detail,
-  tone,
   href,
 }: {
   label: string;
   value: string;
   detail: string;
-  tone: "review" | "risk" | "ok" | "info";
   href: string;
 }) {
-  const toneClasses = {
-    review: "bg-slate-100 text-slate-950 ring-slate-200",
-    risk: "bg-slate-100 text-slate-950 ring-slate-200",
-    ok: "bg-slate-100 text-slate-950 ring-slate-200",
-    info: "bg-slate-100 text-slate-950 ring-slate-200",
-  };
-
   return (
     <Link
       href={href}
-      className={`group rounded-lg p-4 ring-1 transition duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 ${toneClasses[tone]}`}
+      className={`rounded-lg border border-slate-200 bg-slate-50 p-4 transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm ${focusRing}`}
     >
-      <span className="text-xs font-semibold uppercase tracking-wide opacity-75">{label}</span>
+      <span className="text-sm font-semibold text-slate-500">{label}</span>
       <span className="mt-3 flex items-end justify-between gap-4">
-        <strong className="text-3xl font-semibold tracking-tight">{value}</strong>
-        <span className="max-w-28 text-right text-sm leading-5 opacity-75">{detail}</span>
+        <strong className="text-3xl font-semibold tracking-tight text-slate-950">{value}</strong>
+        <span className="max-w-32 text-right text-sm leading-5 text-slate-500">{detail}</span>
       </span>
     </Link>
   );
 }
 
-function CategoryNode({ category, level = 0 }: { category: Category; level?: number }) {
+function RoleBadge({ role }: { role: string }) {
+  const label = role
+    .replace("system_admin", "ผู้ดูแลระบบ")
+    .replace("category_admin", "ผู้ดูแลหมวดรายงาน")
+    .replace("project_manager", "ผู้จัดการหน่วยงาน")
+    .replace("editor", "ผู้จัดทำรายงาน")
+    .replace("viewer", "ผู้ดูรายงาน");
+
   return (
-    <li>
-      <div
-        className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm ${
-          level === 0 ? "bg-slate-100 text-slate-900" : "bg-slate-50 text-slate-700"
-        }`}
-      >
-        <span className="min-w-0 truncate font-medium">{category.name}</span>
-        <span className="shrink-0 rounded bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
-          {category.dashboardCount}
-        </span>
-      </div>
-      {category.children?.length ? (
-        <ul className="mt-2 space-y-2 pl-3">
-          {category.children.map((child) => (
-            <CategoryNode key={child.id} category={child} level={level + 1} />
-          ))}
-        </ul>
-      ) : null}
-    </li>
+    <span className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+      {label}
+    </span>
   );
 }
 
-function FeaturedDashboard({ dashboard }: { dashboard: Dashboard }) {
+function ReportCard({ dashboard }: { dashboard: Dashboard }) {
+  const categoryPath = dashboard.categoryPath?.length
+    ? dashboard.categoryPath.join(" / ")
+    : dashboard.categoryName;
+
   return (
-    <article className="rounded-lg border border-slate-200 bg-slate-50 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.6)]">
+    <article className="rounded-lg border border-slate-200 bg-slate-50 p-4">
       <div className="flex flex-wrap items-center gap-2">
+        <Badge className={sensitivityStyles[dashboard.sensitivity]}>
+          {sensitivityLabels[dashboard.sensitivity]}
+        </Badge>
         <Badge className={providerStyles[dashboard.provider]}>{dashboard.provider}</Badge>
         <Badge className={statusStyles[dashboard.status]}>{statusLabels[dashboard.status]}</Badge>
-        <Badge className={embedStyles[dashboard.embedStatus]}>{embedLabels[dashboard.embedStatus]}</Badge>
       </div>
-      <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{dashboard.title}</h3>
+      <h3 className="mt-3 text-base font-semibold leading-6 text-slate-950">{dashboard.title}</h3>
       <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{dashboard.description}</p>
-      <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Owner</dt>
-          <dd className="mt-1 truncate font-medium text-slate-800">{dashboard.owner}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Views</dt>
-          <dd className="mt-1 font-medium text-slate-800">{dashboard.views.toLocaleString()}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</dt>
-          <dd className="mt-1 font-medium text-slate-800">{dashboard.updatedAt}</dd>
-        </div>
-      </dl>
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <Link
-          href={`/dashboards/${dashboard.id}`}
-          className={`${buttonStyles.primary} h-10 justify-center`}
-        >
-          Open dashboard
+      <p className="mt-3 text-xs font-semibold text-slate-500">{categoryPath}</p>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <span className="text-sm text-slate-500">{dashboard.views.toLocaleString("th-TH")} ครั้ง</span>
+        <Link href={`/dashboards/${dashboard.id}`} className={`${buttonStyles.secondary} h-9 px-3`}>
+          เปิดรายงาน
         </Link>
-        <a
-          href={dashboard.externalUrl}
-          className={`${buttonStyles.secondary} h-10 justify-center`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Fallback URL
-        </a>
       </div>
     </article>
   );
 }
 
-function QueueRow({ dashboard }: { dashboard: Dashboard }) {
-  return (
-    <li className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 transition duration-200 hover:border-slate-300 hover:bg-slate-100">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className={providerStyles[dashboard.provider]}>{dashboard.provider}</Badge>
-            <Badge className={sensitivityStyles[dashboard.sensitivity]}>
-              {sensitivityLabels[dashboard.sensitivity]}
-            </Badge>
-          </div>
-          <h3 className="mt-2 truncate text-sm font-semibold text-slate-950">{dashboard.title}</h3>
-          <p className="mt-1 truncate text-sm text-slate-500">{dashboard.owner}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3 text-sm">
-          <span className="text-slate-500">{dashboard.updatedAt}</span>
-          <Link
-            href={`/dashboards/${dashboard.id}`}
-            className={`${buttonStyles.secondary} h-9 px-3`}
-          >
-            Review
-          </Link>
-        </div>
-      </div>
-    </li>
-  );
-}
-
-function CompactDashboardList({
+function ReportList({
   title,
   description,
   dashboards,
-  actionLabel,
+  emptyText,
 }: {
   title: string;
   description: string;
   dashboards: Dashboard[];
-  actionLabel: string;
+  emptyText: string;
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-slate-50">
-      <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-base font-semibold text-slate-950">{title}</h2>
-          <p className="mt-1 text-sm text-slate-500">{description}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
         </div>
-        <span className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700">
+        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
           {dashboards.length}
         </span>
       </div>
-      <ul className="divide-y divide-slate-200">
-        {dashboards.map((dashboard) => (
-          <li key={dashboard.id} className="px-4 py-3">
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-slate-400" />
-                  <h3 className="truncate text-sm font-semibold text-slate-900">{dashboard.title}</h3>
-                </div>
-                <p className="mt-1 truncate text-xs text-slate-500">
-                  {dashboard.provider} · {dashboard.categoryName}
-                </p>
-              </div>
-              <Link
-                href={`/dashboards/${dashboard.id}`}
-                className={`shrink-0 rounded-md px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition duration-200 hover:bg-slate-100 ${focusRing}`}
-              >
-                {actionLabel}
-              </Link>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {dashboards.length ? (
+        <div className="mt-4 grid gap-3">
+          {dashboards.slice(0, 4).map((dashboard) => (
+            <ReportCard key={dashboard.id} dashboard={dashboard} />
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+          {emptyText}
+        </p>
+      )}
     </section>
   );
 }
 
-function RiskPanel({ dashboards }: { dashboards: Dashboard[] }) {
+function CategoryTree({ categories }: { categories: Category[] }) {
+  const visibleCategories = categories.slice(0, 8);
+
   return (
-    <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-950">Embed risk lane</h2>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            Dashboard ที่ควรเปิดผ่าน fallback หรือเช็ค iframe policy ก่อนเผยแพร่
+          <h2 className="text-base font-semibold text-slate-950">หมวดรายงาน</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-500">
+            โครงสร้างหมวดหมู่รองรับหลายระดับตามกลุ่มงานและตัวชี้วัด
           </p>
         </div>
-        <span className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700">
-          {dashboards.length}
-        </span>
+        <Link href="/catalog" className="text-sm font-semibold text-[#005f80] hover:text-slate-950">
+          ดูทั้งหมด
+        </Link>
       </div>
-      <ul className="mt-4 space-y-3">
-        {dashboards.map((dashboard) => (
-          <li key={dashboard.id} className="rounded-md bg-slate-50 px-3 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold text-slate-950">{dashboard.title}</h3>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
-                  {dashboard.embedStatusReason}
-                </p>
-              </div>
-              <Badge className={embedStyles[dashboard.embedStatus]}>{embedLabels[dashboard.embedStatus]}</Badge>
+      <div className="mt-4 space-y-2">
+        {visibleCategories.map((category) => (
+          <Link
+            key={category.id}
+            href={`/catalog?category=${category.id}`}
+            className={`block rounded-lg border border-slate-200 bg-slate-50 p-3 transition hover:border-slate-300 hover:bg-white ${focusRing}`}
+            style={{ marginLeft: `${Math.min(category.depth ?? 0, 3) * 10}px` }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-slate-800">{category.name}</span>
+              <span className="text-xs font-semibold text-slate-500">
+                {category.dashboardCount.toLocaleString("th-TH")} รายงาน
+              </span>
             </div>
-          </li>
+            {category.path?.length ? (
+              <p className="mt-1 truncate text-xs text-slate-500">{category.path.join(" / ")}</p>
+            ) : null}
+          </Link>
         ))}
-      </ul>
+      </div>
     </section>
   );
+}
+
+function getHeroCopy(mode: HomeMode) {
+  if (mode === "viewer") {
+    return {
+      title: "รายงานที่คุณเข้าถึงได้",
+      description: "เปิดดูรายงานสาธารณะและรายงานภายในที่อนุญาตตามสิทธิ์ของบัญชีคุณ",
+    };
+  }
+
+  if (mode === "creator") {
+    return {
+      title: "จัดการรายงานของหน่วยงาน",
+      description: "ติดตามร่าง รายงานที่ต้องปรับปรุง และรายงานที่เผยแพร่แล้วของทีมคุณ",
+    };
+  }
+
+  if (mode === "reviewer") {
+    return {
+      title: "ดูแลรายงานและหมวดข้อมูล",
+      description: "ติดตามความพร้อมของรายงาน หมวดข้อมูล และข้อจำกัดของ dashboard embed",
+    };
+  }
+
+  return {
+    title: "ภาพรวมระบบรายงาน",
+    description: "ติดตามสถานะรายงาน หมวดหมู่ สิทธิ์ผู้ใช้ และประวัติการเปลี่ยนแปลง",
+  };
 }
 
 export default async function Home() {
   const currentUser = await requireCurrentUser();
-  const [categories, dashboards] = await Promise.all([
-    listCategories(),
+  const [dashboards, categories] = await Promise.all([
     listDashboards(currentUser.id),
+    listCategories(),
   ]);
-  const pinnedDashboards = dashboards.filter((dashboard) => dashboard.isPinned);
-  const pendingReviewDashboards = dashboards.filter((dashboard) => dashboard.status === "in_review");
-  const externalOnlyDashboards = dashboards.filter(
-    (dashboard) => dashboard.embedStatus === "external_only" || dashboard.embedStatus === "blocked",
-  );
-  const recentlyPublishedDashboards = [...dashboards]
+
+  const mode = getHomeMode(currentUser);
+  const canCreate = hasPermission(currentUser, "dashboard:create");
+  const canAudit = hasPermission(currentUser, "audit:read");
+  const canManageUsers = hasPermission(currentUser, "permission:manage");
+  const heroCopy = getHeroCopy(mode);
+
+  const publishedReports = dashboards
     .filter((dashboard) => dashboard.status === "published")
-    .sort(
-      (first, second) =>
-        new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime(),
-    )
-    .slice(0, 4);
-  const popularDashboards = [...dashboards]
-    .sort((first, second) => second.views - first.views)
-    .slice(0, 4);
-  const myTeamDashboards = dashboards.filter(
-    (dashboard) => dashboard.ownerTeamId === currentUser.teamId,
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  const publicReports = publishedReports.filter((dashboard) => dashboard.sensitivity === "public");
+  const loginRequiredReports = publishedReports.filter((dashboard) => dashboard.sensitivity !== "public");
+  const myTeamReports = dashboards.filter((dashboard) => dashboard.ownerTeamId === currentUser.teamId);
+  const myWorkingReports = dashboards.filter(
+    (dashboard) =>
+      isActionableForUser(currentUser, dashboard) &&
+      (dashboard.status === "draft" || dashboard.status === "rejected" || dashboard.status === "in_review"),
   );
-  const favoriteDashboards = dashboards.filter((dashboard) => dashboard.isFavorite);
-  const publishedCount = recentlyPublishedDashboards.length;
-  const mainPinnedDashboard = pinnedDashboards[0] ?? recentlyPublishedDashboards[0];
-  const secondaryPinnedDashboards = pinnedDashboards.slice(1);
-  const operationalDashboards = uniqueDashboards([
-    ...pendingReviewDashboards,
-    ...externalOnlyDashboards,
+  const recommendedReports = uniqueDashboards([
+    ...publishedReports.filter((dashboard) => dashboard.isPinned),
+    ...[...publishedReports].sort((a, b) => b.views - a.views),
   ]).slice(0, 4);
 
   return (
     <main className="min-h-screen bg-[oklch(0.968_0.006_240)] text-slate-950">
-      <header className="border-b border-slate-200 bg-slate-50/95">
-        <div className="mx-auto max-w-7xl px-5 py-5">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-sm font-semibold text-slate-500">ยินดีต้อนรับ</p>
-              <h2 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
-                {currentUser.name}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+      <header className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-5 py-6">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+            <div>
+              <p className="text-sm font-semibold text-[#005f80]">ระบบบริการรายงานสุขภาพ</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+                {heroCopy.title}
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">{heroCopy.description}</p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Link href="/catalog" className={`${buttonStyles.primary} h-10`}>
+                  ดูรายงานทั้งหมด
+                </Link>
+                {canCreate ? (
+                  <Link href="/dashboards/new" className={`${buttonStyles.secondary} h-10`}>
+                    เพิ่มรายงาน
+                  </Link>
+                ) : null}
+                <Link href="/public" className={`${buttonStyles.secondary} h-10`}>
+                  หน้าสาธารณะ
+                </Link>
+              </div>
+            </div>
+
+            <aside className="rounded-lg border border-slate-200 bg-white p-4">
+              <p className="text-sm font-semibold text-slate-500">เข้าสู่ระบบในชื่อ</p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-950">{currentUser.name}</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
                 {currentUser.title} · {currentUser.department}
               </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {currentUser.roles.map((role) => (
-                <span
-                  key={role}
-                  className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700"
-                >
-                  {role}
-                </span>
-              ))}
-            </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {currentUser.roles.map((role) => (
+                  <RoleBadge key={role} role={role} />
+                ))}
+              </div>
+            </aside>
           </div>
 
           <section className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <WorkMetric
-              label="Published"
-              value={String(publishedCount)}
-              detail="เห็นล่าสุดใน portal"
+            <MetricCard
+              label="รายงานที่เปิดได้"
+              value={String(publishedReports.length)}
+              detail="ตามสิทธิ์ปัจจุบัน"
               href="/catalog"
-              tone="ok"
             />
-            <WorkMetric
-              label="Review queue"
-              value={String(pendingReviewDashboards.length)}
-              detail="ต้องตัดสินใจ"
-              href="/review"
-              tone="review"
+            <MetricCard
+              label="รายงานสาธารณะ"
+              value={String(publicReports.length)}
+              detail="ประชาชนเห็นได้"
+              href="/public"
             />
-            <WorkMetric
-              label="Pinned"
-              value={String(pinnedDashboards.length)}
-              detail="หน้าแรก"
+            <MetricCard
+              label="ต้องเข้าสู่ระบบ"
+              value={String(loginRequiredReports.length)}
+              detail="รายงานภายใน"
               href="/catalog"
-              tone="info"
             />
-            <WorkMetric
-              label="Embed risk"
-              value={String(externalOnlyDashboards.length)}
-              detail="ใช้ fallback"
-              href="/catalog"
-              tone="risk"
+            <MetricCard
+              label={canAudit ? "หมวดรายงาน" : "ทีมของฉัน"}
+              value={String(canAudit ? categories.length : myTeamReports.length)}
+              detail={canAudit ? "ทุกระดับชั้น" : "รายงานที่เกี่ยวข้อง"}
+              href={canAudit ? "/admin/categories" : "/catalog"}
             />
           </section>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl space-y-7 px-5 py-6">
-        <section className="rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-sm">
-          <div className="grid gap-3 lg:grid-cols-[1fr_170px_170px_auto]">
-            <label className="block">
-              <span className="sr-only">ค้นหา Dashboard</span>
-              <input
-                className={`${fieldStyles} h-11 w-full`}
-                placeholder="ค้นหาด้วยชื่อ Dashboard, tag, เจ้าของ, provider..."
+      <div className="mx-auto grid max-w-7xl gap-6 px-5 py-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-6">
+          {mode === "viewer" ? (
+            <>
+              <ReportList
+                title="รายงานแนะนำ"
+                description="รายงานที่เผยแพร่แล้วและเหมาะกับการเปิดดูบ่อย"
+                dashboards={recommendedReports}
+                emptyText="ยังไม่มีรายงานแนะนำในขณะนี้"
               />
-            </label>
-            <select className={`${fieldStyles} h-11 text-slate-700`}>
-              <option>ทุก Provider</option>
-              <option>Looker Studio</option>
-              <option>Superset</option>
-              <option>Grafana</option>
-            </select>
-            <select className={`${fieldStyles} h-11 text-slate-700`}>
-              <option>ทุกสถานะ</option>
-              <option>Published</option>
-              <option>In review</option>
-              <option>Embed risk</option>
-            </select>
-            <Link
-              href="/dashboards/new"
-              className={`${buttonStyles.primary} h-11 justify-center`}
-            >
-              สร้าง Dashboard
-            </Link>
-          </div>
-        </section>
+              <ReportList
+                title="อัปเดตล่าสุด"
+                description="รายงานที่มีการปรับปรุงล่าสุดตามสิทธิ์ของคุณ"
+                dashboards={publishedReports}
+                emptyText="ยังไม่มีรายงานที่เปิดให้บัญชีนี้ดู"
+              />
+            </>
+          ) : (
+            <>
+              <ReportList
+                title="งานของฉันและทีม"
+                description="ร่าง รายงานตีกลับ และรายการที่ทีมของคุณกำลังจัดการ"
+                dashboards={myWorkingReports}
+                emptyText="ไม่มีงานค้างของทีมในขณะนี้"
+              />
+              <ReportList
+                title="รายงานเผยแพร่ล่าสุด"
+                description="รายงานที่พร้อมเปิดดูจากระบบหลัง login"
+                dashboards={publishedReports}
+                emptyText="ยังไม่มีรายงานเผยแพร่"
+              />
+            </>
+          )}
+        </div>
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)]">
-          {mainPinnedDashboard ? <FeaturedDashboard dashboard={mainPinnedDashboard} /> : null}
-          <div className="grid gap-4">
-            <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-base font-semibold text-slate-950">งานที่ควรจัดการก่อน</h2>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    รายการที่รอ review หรือมีความเสี่ยงจาก embed policy
-                  </p>
-                </div>
-                <span className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700">
-                  {operationalDashboards.length}
-                </span>
+        <div className="space-y-6">
+          <CategoryTree categories={categories} />
+          {canManageUsers ? (
+            <section className="rounded-lg border border-slate-200 bg-white p-4">
+              <h2 className="text-base font-semibold text-slate-950">ดูแลระบบ</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                จัดการสิทธิ์ผู้ใช้ หมวดรายงาน และตรวจสอบประวัติการเปลี่ยนแปลง
+              </p>
+              <div className="mt-4 grid gap-2">
+                <Link href="/admin/users" className={`${buttonStyles.secondary} h-10 justify-center`}>
+                  ผู้ใช้งานและสิทธิ์
+                </Link>
+                <Link href="/audit" className={`${buttonStyles.secondary} h-10 justify-center`}>
+                  ประวัติ Audit
+                </Link>
               </div>
-              <ul className="mt-4 space-y-3">
-                {operationalDashboards.map((dashboard) => (
-                  <QueueRow key={dashboard.id} dashboard={dashboard} />
-                ))}
-              </ul>
             </section>
-            <RiskPanel dashboards={externalOnlyDashboards} />
-          </div>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-3">
-          <CompactDashboardList
-            title="เผยแพร่ล่าสุด"
-            description="dashboard published ล่าสุดที่ผู้ใช้มองเห็นได้"
-            dashboards={recentlyPublishedDashboards}
-            actionLabel="Open"
-          />
-          <CompactDashboardList
-            title="ยอดนิยม"
-            description="เรียงจากจำนวนการเปิดดูใน portal"
-            dashboards={popularDashboards}
-            actionLabel="Open"
-          />
-          <CompactDashboardList
-            title="ทีมของฉัน"
-            description="dashboard ที่ทีมของผู้ใช้เป็นเจ้าของ"
-            dashboards={myTeamDashboards.length ? myTeamDashboards : secondaryPinnedDashboards}
-            actionLabel="View"
-          />
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <CompactDashboardList
-            title="รายการโปรด"
-            description="รายการที่ผู้ใช้ติดดาวไว้เพื่อกลับมาเปิดเร็ว"
-            dashboards={favoriteDashboards}
-            actionLabel="Open"
-          />
-          <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <h2 className="text-base font-semibold text-slate-950">Governance snapshot</h2>
-            <dl className="mt-4 space-y-3 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">Visible dashboards</dt>
-                <dd className="font-semibold text-slate-900">{dashboards.length}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">Categories</dt>
-                <dd className="font-semibold text-slate-900">{categories.length}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">Review workload</dt>
-                <dd className="font-semibold text-amber-900">{pendingReviewDashboards.length}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">Fallback required</dt>
-                <dd className="font-semibold text-rose-800">{externalOnlyDashboards.length}</dd>
-              </div>
-            </dl>
-          </section>
-        </section>
+          ) : null}
+        </div>
       </div>
     </main>
   );

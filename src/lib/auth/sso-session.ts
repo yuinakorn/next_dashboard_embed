@@ -2,6 +2,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { PortalRole, PortalUser, TeamScope } from "@/lib/portal-types";
 
 export const portalSessionCookieName = "dashboard_hub_session";
+export const portalImpersonationCookieName = "dashboard_hub_impersonation";
 export const ssoStateCookieName = "dashboard_hub_sso_state";
 
 const defaultSessionTtlSeconds = 8 * 60 * 60;
@@ -45,6 +46,16 @@ type PortalSessionPayload = {
     accountId?: string;
     hashCid?: string;
   };
+  iat: number;
+  exp: number;
+};
+
+type PortalImpersonationPayload = {
+  actor: {
+    id: string;
+    name: string;
+  };
+  user: PortalUser;
   iat: number;
   exp: number;
 };
@@ -231,6 +242,47 @@ export function readPortalSession(value: string | undefined): PortalSessionPaylo
     const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as PortalSessionPayload;
 
     if (!session.user?.id || !session.exp || session.exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+export function createPortalImpersonation(actor: PortalUser, user: PortalUser): string {
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const ttlSeconds = Number(process.env.PORTAL_IMPERSONATION_TTL_SECONDS) || defaultSessionTtlSeconds;
+  const payload: PortalImpersonationPayload = {
+    actor: {
+      id: actor.id,
+      name: actor.name,
+    },
+    user,
+    iat: issuedAt,
+    exp: issuedAt + ttlSeconds,
+  };
+  const encodedPayload = base64Url(JSON.stringify(payload));
+
+  return `${encodedPayload}.${sign(encodedPayload)}`;
+}
+
+export function readPortalImpersonation(value: string | undefined): PortalImpersonationPayload | null {
+  if (!value) {
+    return null;
+  }
+
+  const [payload, signature] = value.split(".");
+
+  if (!payload || !signature || !verifySignature(payload, signature)) {
+    return null;
+  }
+
+  try {
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as PortalImpersonationPayload;
+
+    if (!session.actor?.id || !session.user?.id || !session.exp || session.exp < Math.floor(Date.now() / 1000)) {
       return null;
     }
 

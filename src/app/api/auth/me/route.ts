@@ -15,6 +15,7 @@ export async function GET() {
         teamId: user.teamId,
         roles: user.roles,
         scopes: user.scopes,
+        impersonatedBy: user.impersonatedBy ?? null,
       },
     });
   } catch (error) {

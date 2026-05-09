@@ -98,6 +98,33 @@ export function UserPermissionManager({
     });
   }
 
+  function startImpersonation() {
+    if (!selectedUser) {
+      return;
+    }
+
+    setMessage(null);
+    startTransition(async () => {
+      const response = await fetch("/api/admin/impersonation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          roles: roleDraft,
+          categoryIds: scopeDraft,
+        }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setMessage(body?.error ?? "ไม่สามารถสลับตัวตนได้");
+        return;
+      }
+
+      window.location.href = "/";
+    });
+  }
+
   if (!users.length) {
     return (
       <section className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
@@ -222,8 +249,18 @@ export function UserPermissionManager({
                 {isPending ? "กำลังบันทึก" : "บันทึกสิทธิ์"}
               </button>
 
+              <button
+                type="button"
+                className={`${buttonStyles.secondary} h-10 w-full justify-center`}
+                disabled={isPending}
+                onClick={startImpersonation}
+              >
+                สลับเป็น user/role นี้
+              </button>
+
               <p className="text-xs leading-5 text-slate-500">
-                การบันทึกจะเขียน role/scope ลงฐานข้อมูลและสร้าง audit log action permission.update
+                ปุ่มสลับตัวตนเป็นโหมดชั่วคราว ไม่เขียน role/scope ลงฐานข้อมูล
+                ส่วนการบันทึกสิทธิ์จะสร้าง audit log action permission.update
               </p>
             </div>
           </>

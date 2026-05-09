@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getDashboard, updateDashboard } from "@/lib/db/dashboards";
-import { canCreateDashboard, canUpdateDashboard } from "@/lib/permissions";
+import {
+  canArchiveDashboard,
+  canCreateDashboard,
+  canPublishDashboard,
+  canUpdateDashboard,
+} from "@/lib/permissions";
 import type {
   DashboardProvider,
+  DashboardStatus,
   RefreshFrequency,
   SensitivityLevel,
 } from "@/lib/portal-types";
@@ -17,6 +23,7 @@ const providers: DashboardProvider[] = [
   "Custom",
 ];
 const sensitivities: SensitivityLevel[] = ["public", "internal", "confidential", "restricted"];
+const statuses: DashboardStatus[] = ["draft", "published", "archived"];
 const refreshFrequencies: RefreshFrequency[] = ["unknown", "daily", "weekly", "monthly", "manual"];
 
 type DashboardUpdateRequest = {
@@ -24,6 +31,7 @@ type DashboardUpdateRequest = {
   description?: string;
   provider?: DashboardProvider;
   categoryId?: string;
+  status?: DashboardStatus;
   sensitivity?: SensitivityLevel;
   embedUrl?: string;
   externalUrl?: string;
@@ -59,10 +67,13 @@ function validateRequest(body: DashboardUpdateRequest): string[] {
   if (!body.sensitivity || !sensitivities.includes(body.sensitivity)) {
     errors.push("sensitivity is invalid");
   }
+  if (body.status && !statuses.includes(body.status)) {
+    errors.push("status is invalid");
+  }
   if (!body.embedUrl || !isHttpsUrl(body.embedUrl)) {
     errors.push("embedUrl must be a valid HTTPS URL");
   }
-  if (!body.externalUrl || !isHttpsUrl(body.externalUrl)) {
+  if (body.externalUrl && !isHttpsUrl(body.externalUrl)) {
     errors.push("externalUrl must be a valid HTTPS URL");
   }
   if (body.refreshFrequency && !refreshFrequencies.includes(body.refreshFrequency)) {
@@ -98,6 +109,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Current user cannot move this dashboard to that category" }, { status: 403 });
   }
 
+  if (body.status && body.status !== dashboard.status) {
+    if (body.status === "published" && !canPublishDashboard(currentUser, dashboard)) {
+      return NextResponse.json({ error: "Current user cannot publish this dashboard" }, { status: 403 });
+    }
+
+    if (body.status === "archived" && !canArchiveDashboard(currentUser, dashboard)) {
+      return NextResponse.json({ error: "Current user cannot archive this dashboard" }, { status: 403 });
+    }
+  }
+
   try {
     const updatedDashboard = await updateDashboard({
       dashboardId: id,
@@ -105,6 +126,7 @@ export async function PATCH(
       description: body.description?.trim() ?? "",
       provider: body.provider as DashboardProvider,
       categoryId: body.categoryId ?? "",
+      status: body.status,
       sensitivity: body.sensitivity as SensitivityLevel,
       embedUrl: body.embedUrl ?? "",
       externalUrl: body.externalUrl ?? "",

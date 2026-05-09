@@ -60,7 +60,7 @@ function validateRequest(body: DashboardRequest): string[] {
   if (!body.embedUrl || !isHttpsUrl(body.embedUrl)) {
     errors.push("embedUrl must be a valid HTTPS URL");
   }
-  if (!body.externalUrl || !isHttpsUrl(body.externalUrl)) {
+  if (body.externalUrl && !isHttpsUrl(body.externalUrl)) {
     errors.push("externalUrl must be a valid HTTPS URL");
   }
   if (body.status && !statuses.includes(body.status)) {

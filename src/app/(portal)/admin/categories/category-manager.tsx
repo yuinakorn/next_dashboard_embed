@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Badge, TableShell, buttonStyles, fieldStyles } from "@/components/dashboard-ui";
+import { Badge, buttonStyles, fieldStyles } from "@/components/dashboard-ui";
 import type { ManagedCategory } from "@/lib/db/categories";
 import type { PortalTeam } from "@/lib/db/users";
 import type { CategoryStatus } from "@/lib/portal-types";
@@ -19,10 +19,15 @@ type CategoryDraft = {
   sortOrder: string;
 };
 
+type CategoryNode = ManagedCategory & {
+  children: CategoryNode[];
+  depth: number;
+};
+
 const statusLabels: Record<CategoryStatus, string> = {
-  active: "Active",
-  inactive: "Inactive",
-  archived: "Archived",
+  active: "ใช้งาน",
+  inactive: "ปิดใช้งาน",
+  archived: "เก็บถาวร",
 };
 
 const statusTone: Record<CategoryStatus, string> = {
@@ -31,29 +36,35 @@ const statusTone: Record<CategoryStatus, string> = {
   archived: "bg-slate-200 text-slate-700",
 };
 
-function buildDepthMap(categories: ManagedCategory[]) {
-  const byParent = new Map<string | null, ManagedCategory[]>();
+function buildCategoryTree(categories: ManagedCategory[], parentId: string | null = null, depth = 0): CategoryNode[] {
+  return categories
+    .filter((category) => category.parentId === parentId)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th-TH"))
+    .map((category) => ({
+      ...category,
+      depth,
+      children: buildCategoryTree(categories, category.id, depth + 1),
+    }));
+}
 
-  for (const category of categories) {
-    const siblings = byParent.get(category.parentId) ?? [];
-    siblings.push(category);
-    byParent.set(category.parentId, siblings);
-  }
-
-  for (const siblings of byParent.values()) {
-    siblings.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
-  }
-
-  const depth = new Map<string, number>();
-  const visit = (parentId: string | null, level: number) => {
-    for (const category of byParent.get(parentId) ?? []) {
-      depth.set(category.id, level);
-      visit(category.id, level + 1);
+function findNode(nodes: CategoryNode[], id: string): CategoryNode | null {
+  for (const node of nodes) {
+    if (node.id === id) {
+      return node;
     }
-  };
 
-  visit(null, 0);
-  return depth;
+    const child = findNode(node.children, id);
+
+    if (child) {
+      return child;
+    }
+  }
+
+  return null;
+}
+
+function containsNode(node: CategoryNode, id: string): boolean {
+  return node.id === id || node.children.some((child) => containsNode(child, id));
 }
 
 function defaultDraft(teams: PortalTeam[], parentId = ""): CategoryDraft {
@@ -71,8 +82,10 @@ export function CategoryManager({
   canCreateRoot,
 }: CategoryManagerProps) {
   const [categories, setCategories] = useState(initialCategories);
-  const [selectedId, setSelectedId] = useState(initialCategories[0]?.id ?? "");
+  const tree = useMemo(() => buildCategoryTree(categories), [categories]);
+  const [selectedId, setSelectedId] = useState(initialCategories.find((category) => category.status === "active")?.id ?? initialCategories[0]?.id ?? "");
   const selectedCategory = categories.find((category) => category.id === selectedId) ?? categories[0];
+  const selectedNode = selectedCategory ? findNode(tree, selectedCategory.id) : null;
   const [editDraft, setEditDraft] = useState(() => ({
     name: selectedCategory?.name ?? "",
     ownerTeamId: selectedCategory?.ownerTeamId ?? teams[0]?.id ?? "",
@@ -93,9 +106,11 @@ export function CategoryManager({
     () => new Map(teams.map((team) => [team.id, team.name])),
     [teams],
   );
-  const depthMap = useMemo(() => buildDepthMap(categories), [categories]);
   const activeParentOptions = categories.filter((category) => category.status === "active");
   const defaultParentId = canCreateRoot ? "" : activeParentOptions[0]?.id ?? "";
+  const totalReports = categories
+    .filter((category) => category.parentId === null && category.status === "active")
+    .reduce((sum, category) => sum + category.dashboardCount, 0);
 
   function selectCategory(category: ManagedCategory) {
     setSelectedId(category.id);
@@ -127,12 +142,12 @@ export function CategoryManager({
       } | null;
 
       if (!response.ok || !body?.categories) {
-        setMessage(body?.error ?? "ไม่สามารถบันทึกหมวดหมู่ได้");
+        setMessage(body?.error ?? "ไม่สามารถบันทึกหมวดรายงานได้");
         return;
       }
 
       setCategories(body.categories);
-      setMessage("บันทึกหมวดหมู่แล้ว");
+      setMessage("บันทึกหมวดรายงานแล้ว");
     });
   }
 
@@ -151,85 +166,106 @@ export function CategoryManager({
       } | null;
 
       if (!response.ok || !body?.categories) {
-        setMessage(body?.error ?? "ไม่สามารถสร้างหมวดหมู่ได้");
+        setMessage(body?.error ?? "ไม่สามารถสร้างหมวดรายงานได้");
         return;
       }
 
       setCategories(body.categories);
       setSelectedId(body.id ?? selectedId);
       setCreateDraft(defaultDraft(teams, defaultParentId));
-      setMessage("สร้างหมวดหมู่แล้ว");
+      setMessage("สร้างหมวดรายงานแล้ว");
     });
+  }
+
+  function renderNode(node: CategoryNode) {
+    const selected = node.id === selectedCategory?.id;
+    const hasChildren = node.children.length > 0;
+    const row = (
+      <button
+        type="button"
+        className={`w-full rounded-md px-3 py-2 text-left transition ${
+          selected ? "bg-slate-950 text-white" : "hover:bg-slate-100"
+        }`}
+        onClick={() => selectCategory(node)}
+      >
+        <span className="flex items-start justify-between gap-3">
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold">{node.name}</span>
+            <span className={`mt-0.5 block truncate text-xs ${selected ? "text-slate-200" : "text-slate-500"}`}>
+              {teamNames.get(node.ownerTeamId) ?? node.ownerTeamId}
+            </span>
+          </span>
+          <span className={`shrink-0 rounded px-2 py-1 text-xs font-semibold ${selected ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600"}`}>
+            {node.dashboardCount.toLocaleString("th-TH")}
+          </span>
+        </span>
+      </button>
+    );
+
+    if (!hasChildren) {
+      return (
+        <li key={node.id} className="flex gap-1" style={{ paddingLeft: `${node.depth * 10}px` }}>
+          <span className="mt-5 h-px w-3 shrink-0 bg-slate-200" aria-hidden="true" />
+          <div className="min-w-0 flex-1">{row}</div>
+        </li>
+      );
+    }
+
+    return (
+      <li key={node.id} style={{ paddingLeft: `${node.depth * 10}px` }}>
+        <details open={node.depth === 0 || (selectedCategory ? containsNode(node, selectedCategory.id) : false)}>
+          <summary className="list-none [&::-webkit-details-marker]:hidden">{row}</summary>
+          <ul className="mt-1 space-y-1 border-l border-slate-200 pl-2">
+            {node.children.map((child) => renderNode(child))}
+          </ul>
+        </details>
+      </li>
+    );
   }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <TableShell
-        title="Category tree"
-        description="หมวดหมู่ทั้งหมดพร้อมสถานะ owner และจำนวน dashboard ที่อ้างอิงอยู่"
-      >
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-100 text-left text-xs uppercase tracking-[0.08em] text-slate-500">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Category</th>
-              <th className="px-4 py-3 font-semibold">Owner team</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 font-semibold">Sort</th>
-              <th className="px-4 py-3 font-semibold">Dashboards</th>
-              <th className="px-4 py-3 font-semibold">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {categories.map((category) => {
-              const active = category.id === selectedCategory?.id;
-
-              return (
-                <tr key={category.id} className={active ? "bg-sky-50/50" : "bg-slate-50"}>
-                  <td className="px-4 py-4 align-top">
-                    <div style={{ paddingLeft: (depthMap.get(category.id) ?? 0) * 18 }}>
-                      <p className="font-semibold text-slate-950">{category.name}</p>
-                      <p className="mt-1 font-mono text-xs text-slate-400">{category.id}</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 align-top text-slate-600">
-                    {teamNames.get(category.ownerTeamId) ?? category.ownerTeamId}
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    <Badge className={statusTone[category.status]}>
-                      {statusLabels[category.status]}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-4 align-top text-slate-600">{category.sortOrder}</td>
-                  <td className="px-4 py-4 align-top text-slate-600">{category.dashboardCount}</td>
-                  <td className="px-4 py-4 align-top">
-                    <button
-                      type="button"
-                      className={`${buttonStyles.secondary} h-9`}
-                      onClick={() => selectCategory(category)}
-                    >
-                      แก้ไข
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </TableShell>
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">โครงสร้างหมวดรายงาน</h2>
+            <p className="mt-1 text-sm text-slate-500">คลี่หมวดเพื่อเลือก แก้ไข หรือสร้างหมวดย่อย</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-md bg-slate-100 px-3 py-2">
+              <p className="text-xs text-slate-500">หมวดทั้งหมด</p>
+              <p className="font-semibold text-slate-950">{categories.length.toLocaleString("th-TH")}</p>
+            </div>
+            <div className="rounded-md bg-slate-100 px-3 py-2">
+              <p className="text-xs text-slate-500">รายงานในหมวดหลัก</p>
+              <p className="font-semibold text-slate-950">{totalReports.toLocaleString("th-TH")}</p>
+            </div>
+          </div>
+        </div>
+        <ul className="mt-4 space-y-1">{tree.map((node) => renderNode(node))}</ul>
+      </section>
 
       <aside className="space-y-4">
-        <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-            Edit category
+            แก้ไขหมวดรายงาน
           </p>
           <h2 className="mt-2 text-lg font-semibold text-slate-950">
-            {selectedCategory?.name ?? "No category"}
+            {selectedCategory?.name ?? "ยังไม่ได้เลือกหมวด"}
           </h2>
 
           {selectedCategory ? (
             <div className="mt-4 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Badge className={statusTone[selectedCategory.status]}>
+                  {statusLabels[selectedCategory.status]}
+                </Badge>
+                <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                  ระดับ {selectedNode?.depth ?? 0}
+                </span>
+              </div>
               <label className="block text-sm font-semibold text-slate-700">
-                Name
+                ชื่อหมวด
                 <input
                   className={`${fieldStyles} mt-1 h-10 w-full`}
                   value={editDraft.name}
@@ -239,7 +275,7 @@ export function CategoryManager({
                 />
               </label>
               <label className="block text-sm font-semibold text-slate-700">
-                Owner team
+                หน่วยงานเจ้าของ
                 <select
                   className={`${fieldStyles} mt-1 h-10 w-full`}
                   value={editDraft.ownerTeamId}
@@ -256,7 +292,7 @@ export function CategoryManager({
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block text-sm font-semibold text-slate-700">
-                  Status
+                  สถานะ
                   <select
                     className={`${fieldStyles} mt-1 h-10 w-full`}
                     value={editDraft.status}
@@ -267,13 +303,13 @@ export function CategoryManager({
                       }))
                     }
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="archived">Archived</option>
+                    <option value="active">ใช้งาน</option>
+                    <option value="inactive">ปิดใช้งาน</option>
+                    <option value="archived">เก็บถาวร</option>
                   </select>
                 </label>
                 <label className="block text-sm font-semibold text-slate-700">
-                  Sort
+                  ลำดับ
                   <input
                     className={`${fieldStyles} mt-1 h-10 w-full`}
                     type="number"
@@ -296,24 +332,24 @@ export function CategoryManager({
           ) : null}
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-            Create category
+            สร้างหมวดรายงาน
           </p>
           <div className="mt-4 space-y-3">
             <label className="block text-sm font-semibold text-slate-700">
-              Name
+              ชื่อหมวด
               <input
                 className={`${fieldStyles} mt-1 h-10 w-full`}
                 value={createDraft.name}
                 onChange={(event) =>
                   setCreateDraft((current) => ({ ...current, name: event.target.value }))
                 }
-                placeholder="เช่น Data Quality"
+                placeholder="เช่น คุณภาพข้อมูล"
               />
             </label>
             <label className="block text-sm font-semibold text-slate-700">
-              Parent
+              หมวดแม่
               <select
                 className={`${fieldStyles} mt-1 h-10 w-full`}
                 value={createDraft.parentId}
@@ -321,16 +357,20 @@ export function CategoryManager({
                   setCreateDraft((current) => ({ ...current, parentId: event.target.value }))
                 }
               >
-                {canCreateRoot ? <option value="">Root category</option> : null}
-                {activeParentOptions.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {"-".repeat(depthMap.get(category.id) ?? 0)} {category.name}
-                  </option>
-                ))}
+                {canCreateRoot ? <option value="">หมวดหลัก</option> : null}
+                {activeParentOptions.map((category) => {
+                  const node = findNode(tree, category.id);
+                  return (
+                    <option key={category.id} value={category.id}>
+                      {"- ".repeat(node?.depth ?? 0)}
+                      {category.name}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             <label className="block text-sm font-semibold text-slate-700">
-              Owner team
+              หน่วยงานเจ้าของ
               <select
                 className={`${fieldStyles} mt-1 h-10 w-full`}
                 value={createDraft.ownerTeamId}
@@ -346,7 +386,7 @@ export function CategoryManager({
               </select>
             </label>
             <label className="block text-sm font-semibold text-slate-700">
-              Sort
+              ลำดับ
               <input
                 className={`${fieldStyles} mt-1 h-10 w-full`}
                 type="number"
@@ -362,7 +402,7 @@ export function CategoryManager({
               disabled={isPending}
               onClick={createCategory}
             >
-              {isPending ? "กำลังสร้าง" : "สร้างหมวดหมู่"}
+              {isPending ? "กำลังสร้าง" : "สร้างหมวดรายงาน"}
             </button>
           </div>
         </section>

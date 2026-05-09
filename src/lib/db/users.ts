@@ -241,8 +241,8 @@ export async function updateManagedUserPermissions({
           :entityId,
           :entityTitle,
           :note,
-          CAST(:beforeJson AS JSON),
-          CAST(:afterJson AS JSON)
+          :beforeJson,
+          :afterJson
         )
       `,
       {

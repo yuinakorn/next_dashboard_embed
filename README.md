@@ -60,7 +60,7 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 | `/` | Internal dashboard portal สำหรับผู้ใช้ที่ login แล้ว |
 | `/public` | Public dashboard center สำหรับประชาชนทั่วไป |
 | `/catalog` | Internal dashboard catalog พร้อม action ตาม permission mock |
-| `/dashboards/db-001` | Embedded dashboard viewer ตัวอย่างด้วย Looker Studio |
+| `/dashboards/[id]` | Embedded dashboard viewer สำหรับ dashboard ที่สร้างในระบบ |
 | `/dashboards/new` | Mock create dashboard form |
 | `/review` | Mock governance workflow สำหรับ approve/reject |
 | `/audit` | Mock audit log สำหรับ governance activity |
