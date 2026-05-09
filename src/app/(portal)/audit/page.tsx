@@ -6,7 +6,7 @@ import {
   buttonStyles,
   fieldStyles,
 } from "@/components/dashboard-ui";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listAuditEvents } from "@/lib/db/audit";
 import { hasPermission } from "@/lib/permissions";
 import type { AuditEvent } from "@/lib/portal-types";
@@ -125,7 +125,7 @@ export default async function AuditPage({
 }: {
   searchParams: Promise<AuditSearchParams>;
 }) {
-  const currentUser = await getCurrentUser();
+  const currentUser = await requireCurrentUser();
   const auditEvents = await listAuditEvents();
   const filters = normalizeSearchParams(await searchParams, auditEvents);
   const filteredAuditEvents = filterAuditEvents(auditEvents, filters);
@@ -138,11 +138,6 @@ export default async function AuditPage({
         eyebrow="Governance Workflow"
         title="ประวัติ Audit"
         description="อ่าน trace ของ Dashboard, หมวดหมู่ และสิทธิ์การใช้งาน"
-        actions={[
-          { href: "/review", label: "คิวตรวจสอบ" },
-          { href: "/catalog", label: "Catalog" },
-          { href: "/", label: "หน้าหลัก", primary: true },
-        ]}
       />
 
       <div className="mx-auto max-w-7xl space-y-6 px-5 py-6">

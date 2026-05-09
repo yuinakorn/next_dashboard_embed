@@ -8,7 +8,7 @@ import {
   buttonStyles,
   fieldStyles,
 } from "@/components/dashboard-ui";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listDashboards } from "@/lib/db/dashboards";
 import { getEmbedStatusTone } from "@/lib/embed-policy";
 import {
@@ -205,7 +205,7 @@ export default async function CatalogPage({
 }: {
   searchParams: Promise<CatalogSearchParams>;
 }) {
-  const currentUser = await getCurrentUser();
+  const currentUser = await requireCurrentUser();
   const filters = normalizeSearchParams(await searchParams);
   const visibleDashboards = await listDashboards(currentUser.id);
   const filteredDashboards = filterDashboards(visibleDashboards, filters);
@@ -218,11 +218,8 @@ export default async function CatalogPage({
       <PageHeader
         eyebrow="ระบบภายใน"
         title="คลัง Dashboard"
-        description="ค้นหา จัดการสถานะ และตรวจสิทธิ์การทำงานจาก SSO จำลอง"
+        description="ค้นหา จัดการสถานะ และตรวจสิทธิ์การทำงาน"
         actions={[
-          { href: "/", label: "หน้าหลัก" },
-          { href: "/review", label: "คิวตรวจสอบ" },
-          { href: "/audit", label: "ประวัติ Audit" },
           { href: "/dashboards/new", label: "สร้าง Dashboard", primary: true },
         ]}
       />

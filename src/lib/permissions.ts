@@ -19,6 +19,7 @@ const rolePermissions: Record<PortalRole, PortalPermission[]> = {
     "dashboard:publish",
     "dashboard:archive",
     "dashboard:pin",
+    "permission:manage",
     "audit:read",
   ],
   category_admin: [

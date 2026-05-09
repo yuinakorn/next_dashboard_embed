@@ -1,10 +1,10 @@
 import { PageHeader } from "@/components/dashboard-ui";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listDashboards } from "@/lib/db/dashboards";
 import { ReviewQueue } from "./review-queue";
 
 export default async function ReviewPage() {
-  const currentUser = await getCurrentUser();
+  const currentUser = await requireCurrentUser();
   const dashboards = await listDashboards(currentUser.id);
   const reviewDashboards = dashboards.filter(
     (dashboard) =>
@@ -18,11 +18,6 @@ export default async function ReviewPage() {
         eyebrow="Governance Workflow"
         title="คิวตรวจสอบ"
         description="อนุมัติ ปฏิเสธ และบันทึก Audit event ก่อนเผยแพร่ Dashboard"
-        actions={[
-          { href: "/audit", label: "ประวัติ Audit" },
-          { href: "/catalog", label: "Catalog" },
-          { href: "/", label: "หน้าหลัก", primary: true },
-        ]}
       />
 
       <div className="mx-auto max-w-7xl px-5 py-6">

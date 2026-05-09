@@ -1,17 +1,26 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getMockCurrentUser, userFromJwtPayload } from "@/lib/mock-auth";
 import type { MockJwtPayload, PortalUser } from "@/lib/portal-types";
+import { portalSessionCookieName, readPortalSession } from "@/lib/auth/sso-session";
+import { getManagedUser } from "@/lib/db/users";
 
-type AuthMode = "dev" | "trusted-header";
+type AuthMode = "dev" | "trusted-header" | "sso-session";
+
+export class AuthRequiredError extends Error {
+  constructor(message = "Authentication is required.") {
+    super(message);
+    this.name = "AuthRequiredError";
+  }
+}
 
 function getAuthMode(): AuthMode {
   const configuredMode = process.env.PORTAL_AUTH_MODE;
 
-  if (configuredMode === "trusted-header" || configuredMode === "dev") {
+  if (configuredMode === "trusted-header" || configuredMode === "dev" || configuredMode === "sso-session") {
     return configuredMode;
   }
 
-  return process.env.NODE_ENV === "production" ? "trusted-header" : "dev";
+  return process.env.NODE_ENV === "production" ? "sso-session" : "dev";
 }
 
 function parseTrustedHeaderUser(value: string | null): PortalUser | null {
@@ -27,21 +36,53 @@ function parseTrustedHeaderUser(value: string | null): PortalUser | null {
   }
 }
 
-export async function getCurrentUser(): Promise<PortalUser> {
-  if (getAuthMode() === "dev") {
-    return getMockCurrentUser();
-  }
+async function applyStoredPermissions(user: PortalUser): Promise<PortalUser> {
+  try {
+    const storedUser = await getManagedUser(user.id);
 
-  const headerStore = await headers();
-  const user = parseTrustedHeaderUser(headerStore.get("x-portal-user"));
+    if (!storedUser) {
+      return user;
+    }
 
-  if (user) {
+    return {
+      ...user,
+      teamId: storedUser.teamId,
+      roles: storedUser.roles,
+      scopes: storedUser.scopes,
+    };
+  } catch {
     return user;
   }
+}
 
-  if (process.env.NODE_ENV !== "production") {
-    return getMockCurrentUser();
+export async function getCurrentUser(): Promise<PortalUser> {
+  const authMode = getAuthMode();
+
+  if (authMode === "dev") {
+    return applyStoredPermissions(getMockCurrentUser());
   }
 
-  throw new Error("Missing authenticated portal user.");
+  if (authMode === "trusted-header") {
+    const headerStore = await headers();
+    const user = parseTrustedHeaderUser(headerStore.get("x-portal-user"));
+
+    if (user) {
+      return applyStoredPermissions(user);
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      return applyStoredPermissions(getMockCurrentUser());
+    }
+
+    throw new AuthRequiredError("Missing authenticated portal user.");
+  }
+
+  const cookieStore = await cookies();
+  const session = readPortalSession(cookieStore.get(portalSessionCookieName)?.value);
+
+  if (session?.user) {
+    return applyStoredPermissions(session.user);
+  }
+
+  throw new AuthRequiredError("Missing or expired SSO session.");
 }

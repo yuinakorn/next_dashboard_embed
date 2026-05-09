@@ -1,12 +1,12 @@
 import { PageHeader } from "@/components/dashboard-ui";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { flattenCategories } from "@/lib/category-utils";
 import { listCategories } from "@/lib/db/categories";
 import { canCreateDashboard, getUserPermissions } from "@/lib/permissions";
 import { NewDashboardForm } from "./new-dashboard-form";
 
 export default async function NewDashboardPage() {
-  const currentUser = await getCurrentUser();
+  const currentUser = await requireCurrentUser();
   const categories = await listCategories();
   const permissions = getUserPermissions(currentUser);
   const categoryOptions = flattenCategories(categories).filter((category) =>

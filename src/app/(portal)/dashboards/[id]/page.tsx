@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader, buttonStyles } from "@/components/dashboard-ui";
 import { DashboardLifecycleActions } from "./dashboard-lifecycle-actions";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listAuditEventsForEntity } from "@/lib/db/audit";
 import { getDashboard } from "@/lib/db/dashboards";
 import { getEmbedStatusTone } from "@/lib/embed-policy";
@@ -20,7 +20,7 @@ type DashboardViewerPageProps = {
 };
 
 export default async function DashboardViewerPage({ params }: DashboardViewerPageProps) {
-  const currentUser = await getCurrentUser();
+  const currentUser = await requireCurrentUser();
   const { id } = await params;
   const dashboard = await getDashboard(id, currentUser.id);
 

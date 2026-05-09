@@ -21,6 +21,8 @@ export type EmbedStatus = "embeddable" | "unknown" | "external_only" | "blocked"
 
 export type RefreshFrequency = "unknown" | "daily" | "weekly" | "monthly" | "manual";
 
+export type CategoryStatus = "active" | "inactive" | "archived";
+
 export type PortalPermission =
   | "category:create_root"
   | "category:create_child"
@@ -33,6 +35,7 @@ export type PortalPermission =
   | "dashboard:publish"
   | "dashboard:archive"
   | "dashboard:pin"
+  | "permission:manage"
   | "audit:read";
 
 export type TeamScope = {

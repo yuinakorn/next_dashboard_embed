@@ -34,6 +34,11 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
   - `GET /api/categories`
   - `GET /api/dashboards`
   - `POST /api/dashboards`
+- Provider ID SSO login flow:
+  - `/login`
+  - `/api/auth/start`
+  - `/api/auth/callback`
+  - `/api/auth/logout`
 - `/catalog` อ่านข้อมูลจาก MySQL จริง
 - `/dashboards/new` submit dashboard ลง MySQL จริง
 - `/dashboards/[id]` โหลด dashboard จาก MySQL จริง
@@ -59,6 +64,10 @@ Governed Dashboard Portal สำหรับบริหารจัดการ
 | `/dashboards/new` | Mock create dashboard form |
 | `/review` | Mock governance workflow สำหรับ approve/reject |
 | `/audit` | Mock audit log สำหรับ governance activity |
+| `/login` | หน้าเข้าสู่ระบบด้วย Provider ID SSO |
+| `/api/auth/start` | เริ่ม SSO authorization redirect พร้อม state cookie |
+| `/api/auth/callback` | รับ callback, ตรวจ state, exchange code และสร้าง session |
+| `/api/auth/logout` | ลบ session cookie ของ Dashboard Hub |
 | `/api/embed/check` | Server-side URL/header check สำหรับ embed health |
 | `/api/categories` | DB-backed categories API |
 | `/api/dashboards` | DB-backed dashboards API |
@@ -77,6 +86,10 @@ src/
     review/review-queue.tsx # Client approve/reject state and audit trail
     audit/page.tsx        # Mock audit log route
     api/embed/check/route.ts # Server-side embed health checker
+    api/auth/start/route.ts # Start Provider ID SSO authorization flow
+    api/auth/callback/route.ts # Exchange SSO code and create app session
+    api/auth/logout/route.ts # Clear app session
+    login/page.tsx          # SSO login screen
     api/categories/route.ts # DB-backed categories API
     api/dashboards/route.ts # DB-backed dashboards API
     public/page.tsx       # Public dashboard center
@@ -148,15 +161,28 @@ Lint:
 npm run lint
 ```
 
-## Auth And Data Plan
+## Auth
 
-ระบบจริงจะรับ SSO/JWT จากระบบ auth หลักของหน่วยงาน โดย JWT จะระบุข้อมูลผู้ใช้, role, team และ permission ที่ระบบ portal ใช้ตัดสินสิทธิ์
+ระบบรองรับ Provider ID SSO ตามคู่มือ client app integration โดยใช้ authorization code flow และสร้าง session ของ Dashboard Hub เองหลัง callback สำเร็จ
 
-ในช่วง mock นี้ยังไม่มีการเชื่อมฐานข้อมูลและยังไม่อ่าน JWT จริง ข้อมูลทั้งหมดอยู่ใน:
+ตั้งค่า environment ฝั่ง server:
 
 ```text
-src/lib/mock-portal-data.ts
+PORTAL_AUTH_MODE=sso-session
+SSO_URL=http://localhost:3000
+SSO_CLIENT_ID=your-client-id
+SSO_CLIENT_SECRET=your-client-secret
+SSO_REDIRECT_URI=http://localhost:3000/api/auth/callback
+PORTAL_SESSION_SECRET=long-random-session-signing-secret
 ```
+
+หมายเหตุ:
+
+- `SSO_CLIENT_SECRET` และ `PORTAL_SESSION_SECRET` ต้องอยู่ฝั่ง server เท่านั้น
+- ถ้าไม่ตั้ง `SSO_REDIRECT_URI` ระบบจะ derive จาก origin ของ request เป็น `/api/auth/callback`
+- `PORTAL_DEFAULT_ROLES` สามารถกำหนด role เริ่มต้นแบบ comma-separated เช่น `viewer,editor`
+- `PORTAL_DEFAULT_CATEGORY_IDS` ใช้ผูก scope หมวดหมู่เริ่มต้นแบบ comma-separated
+- development ยัง default เป็น `PORTAL_AUTH_MODE=dev` เพื่อใช้ mock user ได้เหมือนเดิม
 
 ## Roadmap
 

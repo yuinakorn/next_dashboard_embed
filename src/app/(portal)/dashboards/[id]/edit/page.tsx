@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/dashboard-ui";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { flattenCategories } from "@/lib/category-utils";
 import { listCategories } from "@/lib/db/categories";
 import { getDashboard } from "@/lib/db/dashboards";
@@ -14,7 +14,7 @@ type EditDashboardPageProps = {
 };
 
 export default async function EditDashboardPage({ params }: EditDashboardPageProps) {
-  const currentUser = await getCurrentUser();
+  const currentUser = await requireCurrentUser();
   const { id } = await params;
   const dashboard = await getDashboard(id, currentUser.id);
 
