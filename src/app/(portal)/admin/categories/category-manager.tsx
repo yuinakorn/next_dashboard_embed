@@ -33,7 +33,7 @@ const statusLabels: Record<CategoryStatus, string> = {
 const statusTone: Record<CategoryStatus, string> = {
   active: "bg-emerald-50 text-emerald-800",
   inactive: "bg-amber-50 text-amber-900",
-  archived: "bg-slate-200 text-slate-700",
+  archived: "bg-[oklch(0.91_0.006_250)] text-[oklch(0.3_0.018_255)]",
 };
 
 function buildCategoryTree(categories: ManagedCategory[], parentId: string | null = null, depth = 0): CategoryNode[] {
@@ -335,8 +335,8 @@ export function CategoryManager({
           setDragOverId(null);
         }}
         className={`w-full rounded-md px-3 py-2 text-left transition ${
-          selected ? "bg-slate-950 text-white" : "hover:bg-slate-100"
-        } ${isDropTarget ? "ring-2 ring-sky-500 ring-offset-1" : ""} ${
+          selected ? "bg-[oklch(0.21_0.015_255)] text-white" : "hover:bg-[oklch(0.955_0.005_250)]"
+        } ${isDropTarget ? "ring-2 ring-[oklch(0.5_0.14_258)] ring-offset-1" : ""} ${
           isDragging ? "opacity-50" : ""
         }`}
         onClick={() => selectCategory(node)}
@@ -344,11 +344,11 @@ export function CategoryManager({
         <span className="flex items-start justify-between gap-3">
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">{node.name}</span>
-            <span className={`mt-0.5 block truncate text-xs ${selected ? "text-slate-200" : "text-slate-500"}`}>
+            <span className={`mt-0.5 block truncate text-xs ${selected ? "text-[oklch(0.91_0.006_250)]" : "text-[oklch(0.5_0.012_255)]"}`}>
               {teamNames.get(node.ownerTeamId) ?? node.ownerTeamId}
             </span>
           </span>
-          <span className={`shrink-0 rounded px-2 py-1 text-xs font-semibold ${selected ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600"}`}>
+          <span className={`shrink-0 rounded px-2 py-1 text-xs font-semibold ${selected ? "bg-white/15 text-white" : "bg-[oklch(0.955_0.005_250)] text-[oklch(0.5_0.012_255)]"}`}>
             {node.dashboardCount.toLocaleString("th-TH")}
           </span>
         </span>
@@ -358,7 +358,7 @@ export function CategoryManager({
     if (!hasChildren) {
       return (
         <li key={node.id} className="flex gap-1" style={{ paddingLeft: `${node.depth * 10}px` }}>
-          <span className="mt-5 h-px w-3 shrink-0 bg-slate-200" aria-hidden="true" />
+          <span className="mt-5 h-px w-3 shrink-0 bg-[oklch(0.91_0.006_250)]" aria-hidden="true" />
           <div className="min-w-0 flex-1">{row}</div>
         </li>
       );
@@ -368,7 +368,7 @@ export function CategoryManager({
       <li key={node.id} style={{ paddingLeft: `${node.depth * 10}px` }}>
         <details open={node.depth === 0 || (selectedCategory ? containsNode(node, selectedCategory.id) : false)}>
           <summary className="list-none [&::-webkit-details-marker]:hidden">{row}</summary>
-          <ul className="mt-1 space-y-1 border-l border-slate-200 pl-2">
+          <ul className="mt-1 space-y-1 border-l border-[oklch(0.91_0.006_250)] pl-2">
             {node.children.map((child) => renderNode(child))}
           </ul>
         </details>
@@ -378,21 +378,21 @@ export function CategoryManager({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-end md:justify-between">
+      <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-[oklch(0.91_0.006_250)] pb-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">โครงสร้างหมวดรายงาน</h2>
-            <p className="mt-1 text-sm text-slate-500">คลี่หมวดเพื่อเลือก แก้ไข หรือสร้างหมวดย่อย · ลากหมวดเพื่อย้ายลำดับภายในหมวดแม่เดียวกัน</p>
+            <h2 className="text-lg font-semibold text-[oklch(0.21_0.015_255)]">โครงสร้างหมวดรายงาน</h2>
+            <p className="mt-1 text-sm text-[oklch(0.5_0.012_255)]">คลี่หมวดเพื่อเลือก แก้ไข หรือสร้างหมวดย่อย · ลากหมวดเพื่อย้ายลำดับภายในหมวดแม่เดียวกัน</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-md bg-slate-100 px-3 py-2">
-                <p className="text-xs text-slate-500">หมวดทั้งหมด</p>
-                <p className="font-semibold text-slate-950">{categories.length.toLocaleString("th-TH")}</p>
+              <div className="rounded-md bg-[oklch(0.955_0.005_250)] px-3 py-2">
+                <p className="text-xs text-[oklch(0.5_0.012_255)]">หมวดทั้งหมด</p>
+                <p className="font-semibold text-[oklch(0.21_0.015_255)]">{categories.length.toLocaleString("th-TH")}</p>
               </div>
-              <div className="rounded-md bg-slate-100 px-3 py-2">
-                <p className="text-xs text-slate-500">รายงานในหมวดหลัก</p>
-                <p className="font-semibold text-slate-950">{totalReports.toLocaleString("th-TH")}</p>
+              <div className="rounded-md bg-[oklch(0.955_0.005_250)] px-3 py-2">
+                <p className="text-xs text-[oklch(0.5_0.012_255)]">รายงานในหมวดหลัก</p>
+                <p className="font-semibold text-[oklch(0.21_0.015_255)]">{totalReports.toLocaleString("th-TH")}</p>
               </div>
             </div>
             <button
@@ -409,11 +409,11 @@ export function CategoryManager({
       </section>
 
       <aside className="space-y-4">
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.66_0.01_255)]">
             แก้ไขหมวดรายงาน
           </p>
-          <h2 className="mt-2 text-lg font-semibold text-slate-950">
+          <h2 className="mt-2 text-lg font-semibold text-[oklch(0.21_0.015_255)]">
             {selectedCategory?.name ?? "ยังไม่ได้เลือกหมวด"}
           </h2>
 
@@ -423,11 +423,11 @@ export function CategoryManager({
                 <Badge className={statusTone[selectedCategory.status]}>
                   {statusLabels[selectedCategory.status]}
                 </Badge>
-                <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                <span className="rounded-md bg-[oklch(0.955_0.005_250)] px-2 py-1 text-xs font-semibold text-[oklch(0.5_0.012_255)]">
                   ระดับ {selectedNode?.depth ?? 0}
                 </span>
               </div>
-              <label className="block text-sm font-semibold text-slate-700">
+              <label className="block text-sm font-semibold text-[oklch(0.3_0.018_255)]">
                 ชื่อหมวด
                 <input
                   className={`${fieldStyles} mt-1 h-10 w-full`}
@@ -437,7 +437,7 @@ export function CategoryManager({
                   }
                 />
               </label>
-              <label className="block text-sm font-semibold text-slate-700">
+              <label className="block text-sm font-semibold text-[oklch(0.3_0.018_255)]">
                 หน่วยงานเจ้าของ
                 <select
                   className={`${fieldStyles} mt-1 h-10 w-full`}
@@ -454,7 +454,7 @@ export function CategoryManager({
                 </select>
               </label>
               <div className="grid grid-cols-2 gap-3">
-                <label className="block text-sm font-semibold text-slate-700">
+                <label className="block text-sm font-semibold text-[oklch(0.3_0.018_255)]">
                   สถานะ
                   <select
                     className={`${fieldStyles} mt-1 h-10 w-full`}
@@ -471,7 +471,7 @@ export function CategoryManager({
                     <option value="archived">เก็บถาวร</option>
                   </select>
                 </label>
-                <label className="block text-sm font-semibold text-slate-700">
+                <label className="block text-sm font-semibold text-[oklch(0.3_0.018_255)]">
                   ลำดับ
                   <input
                     className={`${fieldStyles} mt-1 h-10 w-full`}
@@ -496,31 +496,31 @@ export function CategoryManager({
         </section>
 
         {message ? (
-          <div className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700">
+          <div className="rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-3 py-2 text-sm text-[oklch(0.3_0.018_255)]">
             {message}
           </div>
         ) : null}
       </aside>
 
       {isCreateDrawerOpen ? (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/25">
+        <div className="fixed inset-0 z-50 flex justify-end bg-[oklch(0.21_0.015_255)]/25">
           <button
             type="button"
             className="absolute inset-0 cursor-default"
             aria-label="ปิดแผงเพิ่มหมวดรายงาน"
             onClick={closeCreateDrawer}
           />
-          <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-slate-200 bg-slate-50 shadow-2xl">
-            <div className="border-b border-slate-200 bg-white px-5 py-4">
+          <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] shadow-2xl">
+            <div className="border-b border-[oklch(0.91_0.006_250)] bg-white px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.66_0.01_255)]">
                     เพิ่มหมวดรายงาน
                   </p>
-                  <h2 className="mt-2 truncate text-xl font-semibold text-slate-950">
+                  <h2 className="mt-2 truncate text-xl font-semibold text-[oklch(0.21_0.015_255)]">
                     สร้างหมวดรายงานใหม่
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-[oklch(0.5_0.012_255)]">
                     เลือกหมวดแม่และหน่วยงานเจ้าของก่อนบันทึก
                   </p>
                 </div>
@@ -536,7 +536,7 @@ export function CategoryManager({
 
             <div className="flex-1 overflow-y-auto px-5 py-5">
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-slate-700">
+                <label className="block text-sm font-semibold text-[oklch(0.3_0.018_255)]">
                   ชื่อหมวด
                   <input
                     className={`${fieldStyles} mt-1 h-10 w-full`}
@@ -547,7 +547,7 @@ export function CategoryManager({
                     placeholder="เช่น คุณภาพข้อมูล"
                   />
                 </label>
-                <label className="block text-sm font-semibold text-slate-700">
+                <label className="block text-sm font-semibold text-[oklch(0.3_0.018_255)]">
                   หมวดแม่
                   <select
                     className={`${fieldStyles} mt-1 h-10 w-full`}
@@ -568,7 +568,7 @@ export function CategoryManager({
                     })}
                   </select>
                 </label>
-                <label className="block text-sm font-semibold text-slate-700">
+                <label className="block text-sm font-semibold text-[oklch(0.3_0.018_255)]">
                   หน่วยงานเจ้าของ
                   <select
                     className={`${fieldStyles} mt-1 h-10 w-full`}
@@ -584,7 +584,7 @@ export function CategoryManager({
                     ))}
                   </select>
                 </label>
-                <label className="block text-sm font-semibold text-slate-700">
+                <label className="block text-sm font-semibold text-[oklch(0.3_0.018_255)]">
                   ลำดับ
                   <input
                     className={`${fieldStyles} mt-1 h-10 w-full`}
@@ -598,7 +598,7 @@ export function CategoryManager({
               </div>
             </div>
 
-            <div className="border-t border-slate-200 bg-white px-5 py-4">
+            <div className="border-t border-[oklch(0.91_0.006_250)] bg-white px-5 py-4">
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <button
                   type="button"

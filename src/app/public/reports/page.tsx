@@ -26,8 +26,8 @@ export default async function PublicReportsPage({
   return (
     <div className="mx-auto grid max-w-7xl gap-6 px-5 py-8 lg:grid-cols-[300px_minmax(0,1fr)]">
       <aside className="lg:sticky lg:top-4 lg:self-start">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <h2 className="text-base font-semibold text-slate-950">หมวดรายงาน</h2>
+        <div className="rounded-xl border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4">
+          <h2 className="text-base font-semibold text-[oklch(0.21_0.015_255)]">หมวดรายงาน</h2>
           <div className="mt-4">
             <CategoryTree categories={categoryRoots} activeCategoryId={filters.category} />
           </div>
@@ -36,8 +36,8 @@ export default async function PublicReportsPage({
 
       <div className="space-y-6">
         <section>
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-950">รายงานสุขภาพ</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-2xl font-semibold tracking-tight text-[oklch(0.21_0.015_255)]">รายงานสุขภาพ</h2>
+          <p className="mt-1 text-sm text-[oklch(0.5_0.012_255)]">
             ค้นหาและกรองรายงานที่เผยแพร่แล้วทั้งหมด
           </p>
         </section>
@@ -46,8 +46,8 @@ export default async function PublicReportsPage({
 
         <section>
           <div className="flex items-center justify-between gap-4">
-            <h3 className="text-base font-semibold text-slate-950">ผลการค้นหา</h3>
-            <span className="text-sm font-semibold text-slate-500">{filteredDashboards.length} รายการ</span>
+            <h3 className="text-base font-semibold text-[oklch(0.21_0.015_255)]">ผลการค้นหา</h3>
+            <span className="text-sm font-semibold text-[oklch(0.5_0.012_255)]">{filteredDashboards.length} รายการ</span>
           </div>
           <div className="mt-4 grid gap-3">
             {filteredDashboards.map((dashboard) => (
@@ -55,7 +55,7 @@ export default async function PublicReportsPage({
             ))}
           </div>
           {!filteredDashboards.length ? (
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+            <div className="mt-4 rounded-xl border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] px-4 py-8 text-center text-sm text-[oklch(0.5_0.012_255)]">
               ไม่พบรายงานที่ตรงกับเงื่อนไขการค้นหา
             </div>
           ) : null}

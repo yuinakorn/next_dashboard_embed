@@ -92,20 +92,20 @@ export function AccessRequestForm({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">ขอสิทธิ์ใช้งานระบบ</h2>
-        <p className="mt-1 text-sm leading-6 text-slate-500">
+      <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-[oklch(0.21_0.015_255)]">ขอสิทธิ์ใช้งานระบบ</h2>
+        <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">
           เลือกบทบาทและหมวดรายงานที่เกี่ยวข้องกับงานของคุณ เพื่อให้ผู้ดูแลระบบตรวจสอบ
         </p>
 
         <fieldset className="mt-5">
-          <legend className="text-sm font-semibold text-slate-900">บทบาทที่ต้องการ</legend>
+          <legend className="text-sm font-semibold text-[oklch(0.21_0.015_255)]">บทบาทที่ต้องการ</legend>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {visibleRoles.map((role) => (
-              <label key={role} className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              <label key={role} className="flex items-center gap-2 rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] px-3 py-2 text-sm text-[oklch(0.3_0.018_255)]">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300"
+                  className="h-4 w-4 rounded border-[oklch(0.85_0.008_250)]"
                   checked={roleDraft.includes(role)}
                   onChange={() => toggleRole(role)}
                   disabled={hasPendingRequest}
@@ -117,13 +117,13 @@ export function AccessRequestForm({
         </fieldset>
 
         <fieldset className="mt-5">
-          <legend className="text-sm font-semibold text-slate-900">หมวดรายงานที่เกี่ยวข้อง</legend>
-          <div className="mt-3 max-h-80 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-3">
+          <legend className="text-sm font-semibold text-[oklch(0.21_0.015_255)]">หมวดรายงานที่เกี่ยวข้อง</legend>
+          <div className="mt-3 max-h-80 space-y-2 overflow-y-auto rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3">
             {categories.map((category) => (
-              <label key={category.id} className="flex items-start gap-2 text-sm text-slate-700">
+              <label key={category.id} className="flex items-start gap-2 text-sm text-[oklch(0.3_0.018_255)]">
                 <input
                   type="checkbox"
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                  className="mt-0.5 h-4 w-4 rounded border-[oklch(0.85_0.008_250)]"
                   checked={categoryDraft.includes(category.id)}
                   onChange={() => toggleCategory(category.id)}
                   disabled={hasPendingRequest}
@@ -137,7 +137,7 @@ export function AccessRequestForm({
         </fieldset>
 
         <label className="mt-5 block">
-          <span className="text-sm font-semibold text-slate-900">เหตุผลประกอบคำขอ</span>
+          <span className="text-sm font-semibold text-[oklch(0.21_0.015_255)]">เหตุผลประกอบคำขอ</span>
           <textarea
             className={`${fieldStyles} mt-2 min-h-32 w-full`}
             value={reason}
@@ -148,7 +148,7 @@ export function AccessRequestForm({
         </label>
 
         {message ? (
-          <div className="mt-4 rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700">
+          <div className="mt-4 rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-3 py-2 text-sm text-[oklch(0.3_0.018_255)]">
             {message}
           </div>
         ) : null}
@@ -163,30 +163,30 @@ export function AccessRequestForm({
         </button>
       </section>
 
-      <aside className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">ประวัติคำขอของคุณ</h2>
+      <aside className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-[oklch(0.21_0.015_255)]">ประวัติคำขอของคุณ</h2>
         <div className="mt-4 space-y-3">
           {requests.length ? (
             requests.map((request) => (
-              <article key={request.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <article key={request.id} className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-sm font-semibold text-[oklch(0.21_0.015_255)]">
                     {statusLabels[request.status]}
                   </p>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-[oklch(0.5_0.012_255)]">
                     {new Date(request.createdAt).toLocaleDateString("th-TH")}
                   </span>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{request.reason}</p>
+                <p className="mt-2 text-sm leading-6 text-[oklch(0.5_0.012_255)]">{request.reason}</p>
                 {request.reviewNote ? (
-                  <p className="mt-2 rounded-md bg-white px-3 py-2 text-sm text-slate-600">
+                  <p className="mt-2 rounded-md bg-white px-3 py-2 text-sm text-[oklch(0.5_0.012_255)]">
                     {request.reviewNote}
                   </p>
                 ) : null}
               </article>
             ))
           ) : (
-            <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+            <p className="rounded-lg border border-dashed border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4 text-sm text-[oklch(0.5_0.012_255)]">
               ยังไม่มีคำขอสิทธิ์
             </p>
           )}

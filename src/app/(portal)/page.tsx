@@ -15,20 +15,20 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 const providerStyles: Record<DashboardProvider, string> = {
-  "Looker Studio": "border-sky-200 bg-sky-50 text-sky-800",
+  "Looker Studio": "border-[oklch(0.88_0.04_258)] bg-[oklch(0.978_0.012_258)] text-[oklch(0.4_0.13_260)]",
   Superset: "border-emerald-200 bg-emerald-50 text-emerald-800",
   Grafana: "border-amber-200 bg-amber-50 text-amber-800",
   Metabase: "border-cyan-200 bg-cyan-50 text-cyan-800",
   "Power BI": "border-yellow-200 bg-yellow-50 text-yellow-900",
-  Custom: "border-slate-200 bg-slate-100 text-slate-700",
+  Custom: "border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] text-[oklch(0.3_0.018_255)]",
 };
 
 const statusStyles: Record<DashboardStatus, string> = {
-  draft: "bg-slate-100 text-slate-700",
+  draft: "bg-[oklch(0.955_0.005_250)] text-[oklch(0.3_0.018_255)]",
   in_review: "bg-amber-50 text-amber-900",
   published: "bg-emerald-50 text-emerald-800",
   rejected: "bg-rose-50 text-rose-800",
-  archived: "bg-slate-200 text-slate-600",
+  archived: "bg-[oklch(0.91_0.006_250)] text-[oklch(0.5_0.012_255)]",
 };
 
 const statusLabels: Record<DashboardStatus, string> = {
@@ -40,8 +40,8 @@ const statusLabels: Record<DashboardStatus, string> = {
 };
 
 const sensitivityStyles: Record<SensitivityLevel, string> = {
-  public: "bg-teal-50 text-teal-800",
-  internal: "bg-sky-50 text-sky-800",
+  public: "bg-[oklch(0.96_0.025_180)] text-[oklch(0.4_0.09_180)]",
+  internal: "bg-[oklch(0.978_0.012_258)] text-[oklch(0.4_0.13_260)]",
   confidential: "bg-orange-50 text-orange-800",
   restricted: "bg-rose-50 text-rose-800",
 };
@@ -112,12 +112,12 @@ function MetricCard({
   return (
     <Link
       href={href}
-      className={`rounded-lg border border-slate-200 bg-slate-50 p-4 transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm ${focusRing}`}
+      className={`rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-[oklch(0.85_0.008_250)] hover:shadow-sm ${focusRing}`}
     >
-      <span className="text-sm font-semibold text-slate-500">{label}</span>
+      <span className="text-sm font-semibold text-[oklch(0.5_0.012_255)]">{label}</span>
       <span className="mt-3 flex items-end justify-between gap-4">
-        <strong className="text-3xl font-semibold tracking-tight text-slate-950">{value}</strong>
-        <span className="max-w-32 text-right text-sm leading-5 text-slate-500">{detail}</span>
+        <strong className="text-3xl font-semibold tracking-tight text-[oklch(0.21_0.015_255)]">{value}</strong>
+        <span className="max-w-32 text-right text-sm leading-5 text-[oklch(0.5_0.012_255)]">{detail}</span>
       </span>
     </Link>
   );
@@ -132,7 +132,7 @@ function RoleBadge({ role }: { role: string }) {
     .replace("viewer", "ผู้ดูรายงาน");
 
   return (
-    <span className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+    <span className="rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-3 py-2 text-sm font-semibold text-[oklch(0.3_0.018_255)]">
       {label}
     </span>
   );
@@ -144,7 +144,7 @@ function ReportCard({ dashboard }: { dashboard: Dashboard }) {
     : dashboard.categoryName;
 
   return (
-    <article className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <article className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Badge className={sensitivityStyles[dashboard.sensitivity]}>
           {sensitivityLabels[dashboard.sensitivity]}
@@ -152,11 +152,11 @@ function ReportCard({ dashboard }: { dashboard: Dashboard }) {
         <Badge className={providerStyles[dashboard.provider]}>{dashboard.provider}</Badge>
         <Badge className={statusStyles[dashboard.status]}>{statusLabels[dashboard.status]}</Badge>
       </div>
-      <h3 className="mt-3 text-base font-semibold leading-6 text-slate-950">{dashboard.title}</h3>
-      <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{dashboard.description}</p>
-      <p className="mt-3 text-xs font-semibold text-slate-500">{categoryPath}</p>
+      <h3 className="mt-3 text-base font-semibold leading-6 text-[oklch(0.21_0.015_255)]">{dashboard.title}</h3>
+      <p className="mt-2 line-clamp-2 text-sm leading-6 text-[oklch(0.5_0.012_255)]">{dashboard.description}</p>
+      <p className="mt-3 text-xs font-semibold text-[oklch(0.5_0.012_255)]">{categoryPath}</p>
       <div className="mt-4 flex items-center justify-between gap-3">
-        <span className="text-sm text-slate-500">{dashboard.views.toLocaleString("th-TH")} ครั้ง</span>
+        <span className="text-sm text-[oklch(0.5_0.012_255)]">{dashboard.views.toLocaleString("th-TH")} ครั้ง</span>
         <Link href={`/dashboards/${dashboard.id}`} className={`${buttonStyles.secondary} h-9 px-3`}>
           เปิดรายงาน
         </Link>
@@ -177,13 +177,13 @@ function ReportList({
   emptyText: string;
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4">
+    <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-950">{title}</h2>
-          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+          <h2 className="text-base font-semibold text-[oklch(0.21_0.015_255)]">{title}</h2>
+          <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">{description}</p>
         </div>
-        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+        <span className="rounded-md bg-[oklch(0.955_0.005_250)] px-2 py-1 text-xs font-semibold text-[oklch(0.5_0.012_255)]">
           {dashboards.length}
         </span>
       </div>
@@ -194,7 +194,7 @@ function ReportList({
           ))}
         </div>
       ) : (
-        <p className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+        <p className="mt-4 rounded-lg border border-dashed border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4 text-sm text-[oklch(0.5_0.012_255)]">
           {emptyText}
         </p>
       )}
@@ -206,15 +206,15 @@ function CategoryTree({ categories }: { categories: Category[] }) {
   const visibleCategories = categories.slice(0, 8);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4">
+    <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-950">หมวดรายงาน</h2>
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <h2 className="text-base font-semibold text-[oklch(0.21_0.015_255)]">หมวดรายงาน</h2>
+          <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">
             โครงสร้างหมวดหมู่รองรับหลายระดับตามกลุ่มงานและตัวชี้วัด
           </p>
         </div>
-        <Link href="/catalog" className="text-sm font-semibold text-[#005f80] hover:text-slate-950">
+        <Link href="/catalog" className="text-sm font-semibold text-[#005f80] hover:text-[oklch(0.21_0.015_255)]">
           ดูทั้งหมด
         </Link>
       </div>
@@ -223,17 +223,17 @@ function CategoryTree({ categories }: { categories: Category[] }) {
           <Link
             key={category.id}
             href={`/catalog?category=${category.id}`}
-            className={`block rounded-lg border border-slate-200 bg-slate-50 p-3 transition hover:border-slate-300 hover:bg-white ${focusRing}`}
+            className={`block rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3 transition hover:border-[oklch(0.85_0.008_250)] hover:bg-white ${focusRing}`}
             style={{ marginLeft: `${Math.min(category.depth ?? 0, 3) * 10}px` }}
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-slate-800">{category.name}</span>
-              <span className="text-xs font-semibold text-slate-500">
+              <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">{category.name}</span>
+              <span className="text-xs font-semibold text-[oklch(0.5_0.012_255)]">
                 {category.dashboardCount.toLocaleString("th-TH")} รายงาน
               </span>
             </div>
             {category.path?.length ? (
-              <p className="mt-1 truncate text-xs text-slate-500">{category.path.join(" / ")}</p>
+              <p className="mt-1 truncate text-xs text-[oklch(0.5_0.012_255)]">{category.path.join(" / ")}</p>
             ) : null}
           </Link>
         ))}
@@ -300,16 +300,16 @@ export default async function Home() {
   ]).slice(0, 4);
 
   return (
-    <main className="min-h-screen bg-[oklch(0.968_0.006_240)] text-slate-950">
-      <header className="border-b border-slate-200 bg-slate-50">
+    <main className="min-h-screen bg-[oklch(0.985_0.003_250)] text-[oklch(0.21_0.015_255)]">
+      <header className="border-b border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)]">
         <div className="mx-auto max-w-7xl px-5 py-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
             <div>
               <p className="text-sm font-semibold text-[#005f80]">ระบบบริการรายงานสุขภาพ</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[oklch(0.21_0.015_255)] md:text-4xl">
                 {heroCopy.title}
               </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">{heroCopy.description}</p>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-[oklch(0.5_0.012_255)]">{heroCopy.description}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link href="/catalog" className={`${buttonStyles.primary} h-10`}>
                   ดูรายงานทั้งหมด
@@ -325,10 +325,10 @@ export default async function Home() {
               </div>
             </div>
 
-            <aside className="rounded-lg border border-slate-200 bg-white p-4">
-              <p className="text-sm font-semibold text-slate-500">เข้าสู่ระบบในชื่อ</p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-950">{currentUser.name}</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-500">
+            <aside className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4">
+              <p className="text-sm font-semibold text-[oklch(0.5_0.012_255)]">เข้าสู่ระบบในชื่อ</p>
+              <h2 className="mt-1 text-xl font-semibold text-[oklch(0.21_0.015_255)]">{currentUser.name}</h2>
+              <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">
                 {currentUser.title} · {currentUser.department}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -406,9 +406,9 @@ export default async function Home() {
         <div className="space-y-6">
           <CategoryTree categories={categories} />
           {canManageUsers ? (
-            <section className="rounded-lg border border-slate-200 bg-white p-4">
-              <h2 className="text-base font-semibold text-slate-950">ดูแลระบบ</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-500">
+            <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4">
+              <h2 className="text-base font-semibold text-[oklch(0.21_0.015_255)]">ดูแลระบบ</h2>
+              <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">
                 จัดการสิทธิ์ผู้ใช้ หมวดรายงาน และตรวจสอบประวัติการเปลี่ยนแปลง
               </p>
               <div className="mt-4 grid gap-2">

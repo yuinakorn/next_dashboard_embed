@@ -70,14 +70,14 @@ export function DashboardViewerEmbed({
   return (
     <section
       ref={containerRef}
-      className={`flex flex-col overflow-hidden border border-slate-200 bg-white shadow-sm ${
+      className={`flex flex-col overflow-hidden border border-[oklch(0.91_0.006_250)] bg-white shadow-sm ${
         isFullscreen ? "h-screen w-screen rounded-none" : "rounded-lg"
       }`}
     >
-      <div className="flex flex-col gap-2 border-b border-slate-200 px-4 py-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 border-b border-[oklch(0.91_0.006_250)] px-4 py-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">พื้นที่แสดงรายงาน</h2>
-          <p className="mt-1 text-sm text-slate-500">{reason}</p>
+          <h2 className="text-sm font-semibold text-[oklch(0.21_0.015_255)]">พื้นที่แสดงรายงาน</h2>
+          <p className="mt-1 text-sm text-[oklch(0.5_0.012_255)]">{reason}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -105,7 +105,7 @@ export function DashboardViewerEmbed({
       <iframe
         title={title}
         src={src}
-        className={`w-full bg-slate-50 ${isFullscreen ? "flex-1" : "h-[72vh]"}`}
+        className={`w-full bg-[oklch(0.998_0.002_250)] ${isFullscreen ? "flex-1" : "h-[72vh]"}`}
         allowFullScreen
         sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
       />

@@ -1,4 +1,5 @@
-import { Badge, buttonStyles, fieldStyles } from "@/components/dashboard-ui";
+import { buttonStyles, fieldStyles } from "@/components/dashboard-ui";
+import { palette } from "@/lib/design-tokens";
 import type { PortalCategory } from "@/lib/db/categories";
 import type { Dashboard, DashboardProvider, SensitivityLevel } from "@/lib/portal-types";
 import Link from "next/link";
@@ -20,15 +21,6 @@ export type PublicSearchParams = {
   category?: string;
   access?: string;
   sort?: string;
-};
-
-const providerStyles: Record<DashboardProvider, string> = {
-  "Looker Studio": "border-sky-200 bg-sky-50 text-sky-800",
-  Superset: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  Grafana: "border-amber-200 bg-amber-50 text-amber-900",
-  Metabase: "border-cyan-200 bg-cyan-50 text-cyan-800",
-  "Power BI": "border-yellow-200 bg-yellow-50 text-yellow-900",
-  Custom: "border-slate-200 bg-slate-100 text-slate-700",
 };
 
 const sensitivityLabels: Record<SensitivityLevel, string> = {
@@ -142,74 +134,154 @@ export function PublicSignalPreview({
   publicCount: number;
   loginRequiredCount: number;
 }) {
+  const featuredCount = dashboard ? 1 : 0;
+  const barHeights = [42, 58, 50, 72, 64, 86, 76, 92, 70, 82, 96, 88];
+
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-[0_24px_70px_-52px_rgba(15,23,42,0.75)]">
+    <div
+      className="rounded-xl p-5 shadow-[0_24px_70px_-52px_oklch(0.21_0.015_255/0.4)]"
+      style={{ background: palette.paper, border: `1px solid ${palette.border}` }}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-            Report signal
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+            style={{ color: palette.inkMuted }}
+          >
+            At a glance
           </p>
-          <h2 className="mt-1 line-clamp-1 text-lg font-semibold text-slate-950">
-            {dashboard?.title ?? "ภาพรวมรายงานสุขภาพ"}
+          <h2
+            className="mt-1 line-clamp-2 text-lg font-semibold leading-tight tracking-tight"
+            style={{ color: palette.ink }}
+          >
+            Public Health Service Overview
           </h2>
         </div>
-        <Badge className="bg-emerald-50 text-emerald-800">Published</Badge>
+        <span
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold"
+          style={{ background: palette.emeraldSoft, color: palette.emeraldDeep }}
+        >
+          <span
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{ background: palette.emerald }}
+            aria-hidden="true"
+          />
+          Published
+        </span>
       </div>
-      <div className="mt-6 grid grid-cols-12 items-end gap-2" aria-hidden="true">
-        {[42, 58, 50, 72, 64, 86, 76, 92, 70, 82, 96, 88].map((height, index) => (
-          <div key={`${height}-${index}`} className="flex h-32 items-end rounded bg-slate-100 px-1">
+
+      <div className="mt-5 grid grid-cols-12 items-end gap-1.5" aria-hidden="true">
+        {barHeights.map((height, index) => {
+          const color = index > 8 ? palette.accentDeep : index > 4 ? "oklch(0.6 0.12 220)" : palette.emerald;
+          return (
             <div
-              className={`w-full rounded-sm ${
-                index > 8 ? "bg-sky-700" : index > 4 ? "bg-cyan-500" : "bg-emerald-500"
-              }`}
-              style={{ height: `${height}%` }}
-            />
-          </div>
-        ))}
+              key={`${height}-${index}`}
+              className="flex h-32 items-end rounded px-0.5"
+              style={{ background: palette.muted }}
+            >
+              <div
+                className="w-full rounded-sm transition-all duration-300"
+                style={{ height: `${height}%`, background: color }}
+              />
+            </div>
+          );
+        })}
       </div>
-      <dl className="mt-5 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-md bg-slate-100 p-3">
-          <dt className="text-xs font-semibold text-slate-500">รายงานทั้งหมด</dt>
-          <dd className="mt-1 text-2xl font-semibold text-slate-950">{reportCount}</dd>
+
+      <dl className="mt-5 grid gap-2 sm:grid-cols-3">
+        <div className="rounded-md p-3" style={{ background: palette.emeraldSoft }}>
+          <dt className="text-xs font-semibold" style={{ color: palette.emeraldDeep }}>
+            Dashboard สาธารณะ
+          </dt>
+          <dd
+            className="mt-1 text-2xl font-semibold tabular-nums"
+            style={{ color: palette.emeraldDeep }}
+          >
+            {publicCount.toLocaleString("th-TH")}
+          </dd>
         </div>
-        <div className="rounded-md bg-emerald-50 p-3">
-          <dt className="text-xs font-semibold text-emerald-900">เปิดดูได้</dt>
-          <dd className="mt-1 text-2xl font-semibold text-emerald-900">{publicCount}</dd>
+        <div className="rounded-md p-3" style={{ background: palette.accentSoft }}>
+          <dt className="text-xs font-semibold" style={{ color: palette.accentDeep }}>
+            รายการแนะนำ
+          </dt>
+          <dd
+            className="mt-1 text-2xl font-semibold tabular-nums"
+            style={{ color: palette.accentDeep }}
+          >
+            {featuredCount.toLocaleString("th-TH")}
+          </dd>
         </div>
-        <div className="rounded-md bg-slate-100 p-3">
-          <dt className="text-xs font-semibold text-slate-500">ต้อง login</dt>
-          <dd className="mt-1 text-2xl font-semibold text-slate-950">{loginRequiredCount}</dd>
+        <div className="rounded-md p-3" style={{ background: palette.muted }}>
+          <dt className="text-xs font-semibold" style={{ color: palette.inkMuted }}>
+            ต้องเข้าสู่ระบบ
+          </dt>
+          <dd
+            className="mt-1 text-2xl font-semibold tabular-nums"
+            style={{ color: palette.ink }}
+          >
+            {loginRequiredCount.toLocaleString("th-TH")}
+          </dd>
         </div>
       </dl>
+      {/* keep reportCount referenced for callers that pass it */}
+      <span className="sr-only">รายงานทั้งหมด {reportCount}</span>
     </div>
   );
 }
 
 export function CategoryCard({ category }: { category: PortalCategory }) {
+  const parentPath = (category.path ?? [category.name]).slice(0, -1).join(" / ");
+
   return (
     <Link
       href={`/public/categories/${category.id}`}
-      className="group rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 transition duration-200 hover:border-slate-300 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+      className="group block rounded-xl px-4 py-4 transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+      style={{
+        background: palette.paper,
+        border: `1px solid ${palette.border}`,
+        outlineColor: palette.accent,
+      }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-slate-500">
-            {(category.path ?? [category.name]).slice(0, -1).join(" / ") || "หมวดหลัก"}
-          </p>
-          <h2 className="mt-1 text-base font-semibold text-slate-950 group-hover:text-sky-800">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {parentPath ? (
+            <p
+              className="truncate text-[11px] font-medium"
+              style={{ color: palette.inkFaint }}
+            >
+              {parentPath}
+            </p>
+          ) : null}
+          <h2
+            className="mt-0.5 truncate text-[15px] font-semibold tracking-tight transition-colors duration-150 group-hover:underline-offset-4 group-hover:underline"
+            style={{ color: palette.ink, textDecorationColor: palette.accent }}
+          >
             {category.name}
           </h2>
         </div>
-        <span className="rounded-md bg-slate-200 px-2 py-1 text-sm font-semibold text-slate-800">
+        <span
+          className="shrink-0 text-[22px] font-semibold tabular-nums leading-none"
+          style={{ color: palette.ink }}
+        >
           {category.totalPublishedReportCount}
         </span>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
-        <span className="rounded bg-emerald-50 px-2 py-1 text-emerald-800">
+      <div className="mt-2 flex items-center gap-3 text-[12px]">
+        <span className="inline-flex items-center gap-1.5" style={{ color: palette.inkMuted }}>
+          <span
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{ background: palette.emerald }}
+            aria-hidden="true"
+          />
           เปิดดูได้ {category.publicReportCount}
         </span>
         {category.loginRequiredReportCount ? (
-          <span className="rounded bg-amber-50 px-2 py-1 text-amber-900">
+          <span className="inline-flex items-center gap-1.5" style={{ color: palette.inkMuted }}>
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ background: palette.indigo }}
+              aria-hidden="true"
+            />
             ต้อง login {category.loginRequiredReportCount}
           </span>
         ) : null}
@@ -242,24 +314,32 @@ export function CategoryTree({
   level?: number;
 }) {
   return (
-    <ul className={level === 0 ? "space-y-1" : "mt-1 space-y-1 border-l border-slate-200 pl-3"}>
+    <ul
+      className={level === 0 ? "space-y-0.5" : "mt-0.5 space-y-0.5 border-l pl-3"}
+      style={level === 0 ? undefined : { borderColor: palette.border }}
+    >
       {categories.map((category) => {
         const isActive = activeCategoryId === category.id;
         return (
           <li key={category.id}>
             <Link
               href={`/public/categories/${category.id}`}
-              className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 ${
-                isActive
-                  ? "bg-slate-900 text-slate-50"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-              }`}
+              className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+              style={{
+                background: isActive ? palette.ink : undefined,
+                color: isActive ? "white" : palette.ink,
+                fontWeight: isActive ? 600 : 500,
+                outlineColor: palette.accent,
+              }}
+              aria-current={isActive ? "page" : undefined}
             >
               <span className="min-w-0 truncate">{category.name}</span>
               <span
-                className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold ${
-                  isActive ? "bg-slate-700 text-slate-100" : "bg-slate-100 text-slate-600"
-                }`}
+                className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums"
+                style={{
+                  background: isActive ? "oklch(1 0 0 / 0.15)" : palette.muted,
+                  color: isActive ? "oklch(0.92 0.005 255)" : palette.inkMuted,
+                }}
               >
                 {category.totalPublishedReportCount}
               </span>
@@ -292,24 +372,27 @@ export function ReportSearchForm({
   );
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-sm">
+    <section
+      className="rounded-xl p-4"
+      style={{ background: palette.paper, border: `1px solid ${palette.border}` }}
+    >
       <form action={action} className="grid gap-3">
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_120px]">
           <label className="min-w-0">
             <span className="sr-only">ค้นหารายงานสุขภาพ</span>
             <input
               name="q"
-              className={`${fieldStyles} h-11 w-full`}
+              className={`${fieldStyles} h-10 w-full`}
               placeholder="ค้นหาชื่อรายงาน ตัวชี้วัด หมวด หรือ tag..."
               defaultValue={filters.q}
             />
           </label>
-          <button type="submit" className={`${buttonStyles.primary} h-11 justify-center`}>
+          <button type="submit" className={`${buttonStyles.primary} h-10 justify-center`}>
             ค้นหา
           </button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[190px_minmax(220px,1fr)_170px_160px_96px]">
-          <select name="provider" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.provider}>
+          <select name="provider" className={`${fieldStyles} h-10`} defaultValue={filters.provider}>
             <option value="all">ทุก provider</option>
             {providers.map((provider) => (
               <option key={provider} value={provider}>
@@ -317,26 +400,26 @@ export function ReportSearchForm({
               </option>
             ))}
           </select>
-          <select name="category" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.category}>
+          <select name="category" className={`${fieldStyles} h-10`} defaultValue={filters.category}>
             <option value="all">ทุกหมวด</option>
             {categoryOptions.map((category) => (
               <option key={category.id} value={category.id}>
-                {"- ".repeat(category.depth ?? 0)}
+                {"— ".repeat(category.depth ?? 0)}
                 {category.name}
               </option>
             ))}
           </select>
-          <select name="access" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.access}>
+          <select name="access" className={`${fieldStyles} h-10`} defaultValue={filters.access}>
             <option value="all">ทุกสิทธิ์เข้าถึง</option>
             <option value="public">เปิดดูได้ทันที</option>
             <option value="login">ต้อง login</option>
           </select>
-          <select name="sort" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.sort}>
+          <select name="sort" className={`${fieldStyles} h-10`} defaultValue={filters.sort}>
             <option value="views_desc">ยอดดูสูงสุด</option>
             <option value="updated_desc">อัปเดตล่าสุด</option>
             <option value="title_asc">ชื่อ A-Z</option>
           </select>
-          <Link href="/public/reports" className={`${buttonStyles.secondary} h-11 justify-center`}>
+          <Link href="/public/reports" className={`${buttonStyles.secondary} h-10 justify-center`}>
             ล้าง
           </Link>
         </div>
@@ -347,54 +430,87 @@ export function ReportSearchForm({
 
 export function ReportCard({ dashboard }: { dashboard: Dashboard }) {
   const isPublic = dashboard.sensitivity === "public";
+  const accessDot = isPublic ? palette.emerald : palette.indigo;
+  const accessInk = isPublic ? palette.emeraldDeep : palette.indigoDeep;
+  const categoryPath = dashboard.categoryPath?.length
+    ? dashboard.categoryPath.join(" / ")
+    : dashboard.categoryName;
 
   return (
-    <article className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 transition duration-200 hover:border-slate-300 hover:bg-slate-100">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className={isPublic ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}>
-              {sensitivityLabels[dashboard.sensitivity]}
-            </Badge>
-            <Badge className={providerStyles[dashboard.provider]}>{dashboard.provider}</Badge>
-            <span className="text-xs font-medium text-slate-500">{dashboard.updatedAt}</span>
+    <article
+      className="group flex flex-col gap-4 overflow-hidden rounded-xl px-5 py-4 transition-shadow duration-200 hover:shadow-[0_2px_12px_-4px_oklch(0.3_0.02_255/0.12)] lg:flex-row lg:items-start lg:justify-between"
+      style={{ background: palette.paper, border: `1px solid ${palette.border}` }}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px]">
+          <span className="inline-flex items-center gap-1.5" style={{ color: accessInk }}>
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ background: accessDot }}
+              aria-hidden="true"
+            />
+            <span className="font-semibold">{sensitivityLabels[dashboard.sensitivity]}</span>
+          </span>
+          <span aria-hidden="true" style={{ color: palette.inkFaint }}>·</span>
+          <span style={{ color: palette.inkMuted }} className="font-medium">
+            {dashboard.provider}
+          </span>
+          <span aria-hidden="true" style={{ color: palette.inkFaint }}>·</span>
+          <span style={{ color: palette.inkFaint }}>{dashboard.updatedAt}</span>
+        </div>
+        <h3
+          className="mt-2 text-[17px] font-semibold leading-6 tracking-tight"
+          style={{ color: palette.ink }}
+        >
+          {dashboard.title}
+        </h3>
+        <p
+          className="mt-1.5 line-clamp-2 max-w-3xl text-sm leading-6"
+          style={{ color: palette.inkMuted }}
+        >
+          {dashboard.description}
+        </p>
+        <p className="mt-2 text-[12px]" style={{ color: palette.inkFaint }}>
+          <span style={{ color: palette.inkMuted }}>หมวด</span> {categoryPath}
+        </p>
+        {dashboard.tags.length ? (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {dashboard.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded px-1.5 py-0.5 text-[11px] font-medium"
+                style={{ background: palette.muted, color: palette.inkMuted }}
+              >
+                {tag}
+              </span>
+            ))}
           </div>
-          <h3 className="mt-3 text-lg font-semibold tracking-tight text-slate-950">
-            {dashboard.title}
-          </h3>
-          <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-slate-600">
-            {dashboard.description}
-          </p>
-          <p className="mt-3 text-xs font-semibold text-slate-500">
-            {dashboard.categoryPath?.join(" / ") ?? dashboard.categoryName}
-          </p>
-          {dashboard.tags.length ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {dashboard.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded border border-slate-200 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
-          {isPublic ? (
-            <Link href={`/public/reports/${dashboard.id}`} className={`${buttonStyles.primary} h-10 justify-center`}>
-              เปิดรายงาน
-            </Link>
-          ) : (
-            <Link
-              href={`/login?next=/dashboards/${dashboard.id}`}
-              className={`${buttonStyles.primary} h-10 justify-center`}
-            >
-              เข้าสู่ระบบเพื่อเปิด
-            </Link>
-          )}
-        </div>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 self-end lg:self-start">
+        {isPublic ? (
+          <Link
+            href={`/public/reports/${dashboard.id}`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{ background: palette.ink, outlineColor: palette.accent }}
+          >
+            เปิดรายงาน
+            <span aria-hidden="true">→</span>
+          </Link>
+        ) : (
+          <Link
+            href={`/login?next=/dashboards/${dashboard.id}`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border px-3.5 text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:bg-[oklch(0.955_0.005_250)]"
+            style={{
+              borderColor: palette.border,
+              color: palette.ink,
+              outlineColor: palette.accent,
+            }}
+          >
+            เข้าสู่ระบบเพื่อเปิด
+            <span aria-hidden="true">→</span>
+          </Link>
+        )}
       </div>
     </article>
   );

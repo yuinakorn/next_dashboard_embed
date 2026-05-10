@@ -2,8 +2,17 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { focusRing } from "@/components/dashboard-ui";
 import type { Category } from "@/lib/portal-types";
+
+const palette = {
+  paper: "oklch(0.998 0.002 250)",
+  muted: "oklch(0.955 0.005 250)",
+  border: "oklch(0.91 0.006 250)",
+  ink: "oklch(0.21 0.015 255)",
+  inkMuted: "oklch(0.5 0.012 255)",
+  inkFaint: "oklch(0.66 0.01 255)",
+  accent: "oklch(0.5 0.14 258)",
+};
 
 function findAncestorChain(categories: Category[], targetId: string, chain: string[] = []): string[] | null {
   for (const category of categories) {
@@ -21,8 +30,8 @@ function findAncestorChain(categories: Category[], targetId: string, chain: stri
 function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg
-      width="14"
-      height="14"
+      width="12"
+      height="12"
       viewBox="0 0 14 14"
       fill="none"
       aria-hidden="true"
@@ -31,7 +40,7 @@ function ChevronIcon({ open }: { open: boolean }) {
       <path
         d="M5 3l4 4-4 4"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -55,14 +64,15 @@ function CategoryNode({
   const hasChildren = (category.children?.length ?? 0) > 0;
   const isExpanded = expandedIds.has(category.id);
   const isSelected = selectedCategory === category.id;
-  const paddingLeft = 12 + depth * 16;
+  const indent = depth * 14;
 
   return (
     <li>
       <div
-        className={`group flex items-center rounded-md ${
-          isSelected ? "bg-slate-950" : "hover:bg-slate-100"
-        }`}
+        className="group flex items-stretch rounded-md transition-colors duration-150 hover:bg-[oklch(0.96_0.005_250)]"
+        style={{
+          background: isSelected ? palette.ink : undefined,
+        }}
       >
         {hasChildren ? (
           <button
@@ -70,35 +80,42 @@ function CategoryNode({
             onClick={() => onToggle(category.id, depth)}
             aria-expanded={isExpanded}
             aria-label={isExpanded ? "ย่อหมวดย่อย" : "ขยายหมวดย่อย"}
-            className={`flex h-9 w-7 shrink-0 items-center justify-center rounded-l-md ${
-              isSelected ? "text-slate-300 hover:text-white" : "text-slate-500 hover:text-slate-900"
-            } ${focusRing}`}
-            style={{ marginLeft: paddingLeft - 12 }}
+            className="flex h-9 w-7 shrink-0 items-center justify-center rounded-l-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+            style={{
+              marginLeft: indent,
+              color: isSelected ? "oklch(0.78 0.01 255)" : palette.inkFaint,
+              outlineColor: palette.accent,
+            }}
           >
             <ChevronIcon open={isExpanded} />
           </button>
         ) : (
-          <span
-            aria-hidden="true"
-            className="h-9 w-7 shrink-0"
-            style={{ marginLeft: paddingLeft - 12 }}
-          />
+          <span aria-hidden="true" className="h-9 w-7 shrink-0" style={{ marginLeft: indent }} />
         )}
         <Link
           href={`/catalog?category=${category.id}`}
-          className={`flex flex-1 flex-col py-2 pr-3 text-sm ${focusRing} ${
-            isSelected ? "font-semibold text-white" : "text-slate-700"
-          }`}
+          className="flex flex-1 items-center justify-between gap-2 py-2 pr-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+          style={{
+            color: isSelected ? "white" : palette.ink,
+            fontWeight: isSelected ? 600 : 500,
+            outlineColor: palette.accent,
+          }}
           aria-current={isSelected ? "page" : undefined}
         >
           <span className="block truncate">{category.name}</span>
-          <span className={`text-xs ${isSelected ? "text-slate-200" : "text-slate-500"}`}>
-            {category.dashboardCount.toLocaleString("th-TH")} รายงาน
+          <span
+            className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums"
+            style={{
+              background: isSelected ? "oklch(1 0 0 / 0.15)" : palette.muted,
+              color: isSelected ? "oklch(0.92 0.005 255)" : palette.inkMuted,
+            }}
+          >
+            {category.dashboardCount.toLocaleString("th-TH")}
           </span>
         </Link>
       </div>
       {hasChildren && isExpanded ? (
-        <ul className="mt-1 space-y-1">
+        <ul className="mt-0.5 space-y-0.5">
           {category.children!.map((child) => (
             <CategoryNode
               key={child.id}
@@ -134,7 +151,6 @@ export function CategoryRail({
     setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
-        // collapse this branch + all descendants
         const collectDescendants = (cats: Category[], targetId: string, found = false): string[] => {
           const acc: string[] = [];
           for (const cat of cats) {
@@ -153,10 +169,8 @@ export function CategoryRail({
           next.delete(descendantId);
         }
       } else {
-        // collapse siblings at this depth, then expand this one
         const siblings = (() => {
           if (depth === 0) return categories.map((c) => c.id);
-          // find parent's children list
           const parentChain = findAncestorChain(categories, id);
           if (!parentChain || parentChain.length === 0) return categories.map((c) => c.id);
           let pointer: Category[] = categories;
@@ -175,26 +189,43 @@ export function CategoryRail({
     });
   };
 
+  const totalCount = categories.reduce((sum, c) => sum + c.dashboardCount, 0);
+  const allSelected = selectedCategory === "all";
+
   return (
-    <aside className="rounded-lg border border-slate-200 bg-white p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold text-slate-950">หมวดรายงาน</h2>
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            เลือกหมวดหลักหรือหมวดย่อยเพื่อดูรายงานภายใต้หมวดนั้น
-          </p>
-        </div>
+    <aside
+      className="rounded-xl border p-3"
+      style={{ background: palette.paper, borderColor: palette.border }}
+    >
+      <div className="px-2 pb-2 pt-1">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: palette.inkMuted }}>
+          หมวดรายงาน
+        </h2>
       </div>
-      <div className="mt-4 space-y-1">
+      <div className="space-y-0.5">
         <Link
           href="/catalog"
-          className={`block rounded-md px-3 py-2 text-sm font-semibold ${focusRing} ${
-            selectedCategory === "all" ? "bg-slate-950 text-white" : "text-slate-700 hover:bg-slate-100"
-          }`}
+          className="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-150 hover:bg-[oklch(0.96_0.005_250)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+          style={{
+            background: allSelected ? palette.ink : undefined,
+            color: allSelected ? "white" : palette.ink,
+            fontWeight: allSelected ? 600 : 500,
+            outlineColor: palette.accent,
+          }}
+          aria-current={allSelected ? "page" : undefined}
         >
-          ทุกหมวดรายงาน
+          <span>ทุกหมวดรายงาน</span>
+          <span
+            className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums"
+            style={{
+              background: allSelected ? "oklch(1 0 0 / 0.15)" : palette.muted,
+              color: allSelected ? "oklch(0.92 0.005 255)" : palette.inkMuted,
+            }}
+          >
+            {totalCount.toLocaleString("th-TH")}
+          </span>
         </Link>
-        <ul className="space-y-1">
+        <ul className="space-y-0.5">
           {categories.map((category) => (
             <CategoryNode
               key={category.id}

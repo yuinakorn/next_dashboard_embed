@@ -112,7 +112,7 @@ export function getEmbedStatusTone(status: EmbedStatus): string {
     return "border-rose-200 bg-rose-50 text-rose-800";
   }
 
-  return "border-slate-200 bg-slate-100 text-slate-700";
+  return "border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] text-[oklch(0.3_0.018_255)]";
 }
 
 export function assessEmbedHeaders(headers: EmbedHeaderSnapshot): EmbedAssessment {

@@ -210,8 +210,8 @@ function CategoryTreePicker({
         type="button"
         className={`w-full rounded-md px-3 py-2 text-left text-sm transition ${
           selected
-            ? "bg-slate-950 font-semibold text-white"
-            : "bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+            ? "bg-[oklch(0.21_0.015_255)] font-semibold text-white"
+            : "bg-white text-[oklch(0.3_0.018_255)] hover:bg-[oklch(0.955_0.005_250)] hover:text-[oklch(0.21_0.015_255)]"
         }`}
         onClick={() => onChange(node.id)}
       >
@@ -222,7 +222,7 @@ function CategoryTreePicker({
     if (!node.children.length) {
       return (
         <li key={node.id} className="flex gap-1">
-          <span className="mt-5 h-px w-3 shrink-0 bg-slate-200" aria-hidden="true" />
+          <span className="mt-5 h-px w-3 shrink-0 bg-[oklch(0.91_0.006_250)]" aria-hidden="true" />
           {content}
         </li>
       );
@@ -232,7 +232,7 @@ function CategoryTreePicker({
       <li key={node.id}>
         <details open={node.depth === 0 || node.children.some((child) => containsCategoryOption(child, value))}>
           <summary className="list-none [&::-webkit-details-marker]:hidden">{content}</summary>
-          <ul className="ml-4 mt-1 space-y-1 border-l border-slate-200 pl-2">
+          <ul className="ml-4 mt-1 space-y-1 border-l border-[oklch(0.91_0.006_250)] pl-2">
             {node.children.map((child) => renderNode(child))}
           </ul>
         </details>
@@ -241,7 +241,7 @@ function CategoryTreePicker({
   }
 
   return (
-    <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-2">
+    <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-2">
       <ul className="space-y-1">{tree.map((node) => renderNode(node))}</ul>
     </div>
   );
@@ -423,12 +423,12 @@ function DashboardMetadataForm({
   }
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="border-b border-slate-200 pb-4">
+    <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-5 shadow-sm">
+      <div className="border-b border-[oklch(0.91_0.006_250)] pb-4">
         <h2 className="text-lg font-semibold tracking-tight">
           {mode === "edit" ? "แก้ไขข้อมูลกำกับรายงาน" : "ข้อมูลกำกับรายงาน"}
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-[oklch(0.5_0.012_255)]">
           {mode === "edit"
             ? "อัปเดตข้อมูลกำกับ URL หมวดรายงาน และบันทึกประวัติการเปลี่ยนแปลง"
             : "ฟอร์มนี้ใช้เพิ่มรายงานเข้าสู่ระบบและบันทึกเป็นฉบับร่างก่อนเผยแพร่"}
@@ -447,7 +447,7 @@ function DashboardMetadataForm({
       <form className="mt-5 space-y-5" onSubmit={(event) => event.preventDefault()}>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">ชื่อรายงาน</span>
+            <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">ชื่อรายงาน</span>
             <input
               className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="เช่น ICU Bed Situation"
@@ -457,9 +457,9 @@ function DashboardMetadataForm({
             <FieldError message={errors.title} />
           </label>
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Provider</span>
+            <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">Provider</span>
             <select
-              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
+              className={`${fieldStyles} mt-2 h-11 w-full text-[oklch(0.3_0.018_255)]`}
               value={state.provider}
               onChange={(event) => updateField("provider", event.target.value as DashboardProvider)}
             >
@@ -467,12 +467,12 @@ function DashboardMetadataForm({
                 <option key={provider}>{provider}</option>
               ))}
             </select>
-            <p className="mt-2 text-sm text-slate-500">{getProviderHint(state.provider)}</p>
+            <p className="mt-2 text-sm text-[oklch(0.5_0.012_255)]">{getProviderHint(state.provider)}</p>
           </label>
         </div>
 
         <label className="block">
-          <span className="text-sm font-semibold text-slate-700">คำอธิบาย</span>
+          <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">คำอธิบาย</span>
           <textarea
             className={`${fieldStyles} mt-2 min-h-28 w-full py-3 leading-6`}
             placeholder="อธิบายว่ารายงานนี้ใช้ตอบคำถามอะไร ใครเป็นผู้รับผิดชอบ และข้อมูลควรถูกใช้อย่างไร"
@@ -484,7 +484,7 @@ function DashboardMetadataForm({
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">หมวดรายงานที่มีสิทธิ์</span>
+            <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">หมวดรายงานที่มีสิทธิ์</span>
             <input
               type="hidden"
               value={state.categoryId}
@@ -498,9 +498,9 @@ function DashboardMetadataForm({
             <FieldError message={errors.categoryId} />
           </label>
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">ระดับข้อมูล</span>
+            <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">ระดับข้อมูล</span>
             <select
-              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
+              className={`${fieldStyles} mt-2 h-11 w-full text-[oklch(0.3_0.018_255)]`}
               value={state.sensitivity}
               onChange={(event) => updateField("sensitivity", event.target.value as SensitivityLevel)}
             >
@@ -513,9 +513,9 @@ function DashboardMetadataForm({
 
         {mode === "edit" && canManageStatus ? (
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">สถานะรายงาน</span>
+            <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">สถานะรายงาน</span>
             <select
-              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
+              className={`${fieldStyles} mt-2 h-11 w-full text-[oklch(0.3_0.018_255)]`}
               value={state.status}
               onChange={(event) => updateField("status", event.target.value as DashboardStatus)}
             >
@@ -523,7 +523,7 @@ function DashboardMetadataForm({
               <option value="published">เผยแพร่แล้ว</option>
               <option value="archived">เก็บถาวร</option>
             </select>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-[oklch(0.5_0.012_255)]">
               ใช้เผยแพร่หรือเก็บถาวรรายงานโดยตรง ในช่วงที่ยังไม่ใช้คิวตรวจสอบ
             </p>
           </label>
@@ -531,7 +531,7 @@ function DashboardMetadataForm({
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Embed URL ของรายงาน</span>
+            <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">Embed URL ของรายงาน</span>
             <input
               className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="https://..."
@@ -541,8 +541,8 @@ function DashboardMetadataForm({
             <FieldError message={errors.embedUrl} />
           </label>
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">
-              URL สำหรับเปิดภายนอก <span className="font-normal text-slate-400">(ไม่บังคับ)</span>
+            <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">
+              URL สำหรับเปิดภายนอก <span className="font-normal text-[oklch(0.66_0.01_255)]">(ไม่บังคับ)</span>
             </span>
             <input
               className={`${fieldStyles} mt-2 h-11 w-full`}
@@ -556,7 +556,7 @@ function DashboardMetadataForm({
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Tags</span>
+            <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">Tags</span>
             <input
               className={`${fieldStyles} mt-2 h-11 w-full`}
               placeholder="KPI, ICU, จังหวัด"
@@ -565,9 +565,9 @@ function DashboardMetadataForm({
             />
           </label>
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">ความถี่การอัปเดต</span>
+            <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">ความถี่การอัปเดต</span>
             <select
-              className={`${fieldStyles} mt-2 h-11 w-full text-slate-700`}
+              className={`${fieldStyles} mt-2 h-11 w-full text-[oklch(0.3_0.018_255)]`}
               value={state.refreshFrequency}
               onChange={(event) => updateField("refreshFrequency", event.target.value as RefreshFrequency)}
             >
@@ -579,7 +579,7 @@ function DashboardMetadataForm({
         </div>
 
         <label className="block">
-          <span className="text-sm font-semibold text-slate-700">แหล่งข้อมูลและข้อจำกัด</span>
+          <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">แหล่งข้อมูลและข้อจำกัด</span>
           <textarea
             className={`${fieldStyles} mt-2 min-h-24 w-full py-3 leading-6`}
             placeholder="ระบุแหล่งข้อมูล เงื่อนไขการตีความ หรือข้อจำกัดที่ผู้ใช้งานควรรู้"
@@ -589,11 +589,11 @@ function DashboardMetadataForm({
           <FieldError message={errors.dataSourceNote} />
         </label>
 
-        <section className="overflow-hidden rounded-lg border border-slate-200">
-          <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <section className="overflow-hidden rounded-lg border border-[oklch(0.91_0.006_250)]">
+          <div className="flex flex-col gap-3 border-b border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-slate-800">ตัวอย่างการแสดงรายงาน</h3>
-              <p className="mt-1 text-sm text-slate-500">{embedAssessment.reason}</p>
+              <h3 className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">ตัวอย่างการแสดงรายงาน</h3>
+              <p className="mt-1 text-sm text-[oklch(0.5_0.012_255)]">{embedAssessment.reason}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -612,7 +612,7 @@ function DashboardMetadataForm({
             </div>
           </div>
           {healthResult ? (
-            <div className="border-b border-slate-200 px-4 py-3">
+            <div className="border-b border-[oklch(0.91_0.006_250)] px-4 py-3">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <div
@@ -620,10 +620,10 @@ function DashboardMetadataForm({
                   >
                     {healthResult.label}
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{healthResult.reason}</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">{healthResult.recommendation}</p>
+                  <p className="mt-2 text-sm leading-6 text-[oklch(0.5_0.012_255)]">{healthResult.reason}</p>
+                  <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">{healthResult.recommendation}</p>
                 </div>
-                <div className="text-sm text-slate-500 md:text-right">
+                <div className="text-sm text-[oklch(0.5_0.012_255)] md:text-right">
                   <div>ตรวจเมื่อ {new Date(healthResult.checkedAt).toLocaleString()}</div>
                   {healthResult.headers ? (
                     <>
@@ -634,13 +634,13 @@ function DashboardMetadataForm({
                 </div>
               </div>
               {healthResult.headers ? (
-                <dl className="mt-3 grid gap-2 rounded-md bg-slate-100 p-3 text-xs text-slate-600 md:grid-cols-2">
+                <dl className="mt-3 grid gap-2 rounded-md bg-[oklch(0.955_0.005_250)] p-3 text-xs text-[oklch(0.5_0.012_255)] md:grid-cols-2">
                   <div>
-                    <dt className="font-semibold text-slate-800">X-Frame-Options</dt>
+                    <dt className="font-semibold text-[oklch(0.3_0.018_255)]">X-Frame-Options</dt>
                     <dd className="mt-1 break-words">{healthResult.headers.xFrameOptions ?? "not present"}</dd>
                   </div>
                   <div>
-                    <dt className="font-semibold text-slate-800">Content-Security-Policy</dt>
+                    <dt className="font-semibold text-[oklch(0.3_0.018_255)]">Content-Security-Policy</dt>
                     <dd className="mt-1 break-words">
                       {healthResult.headers.contentSecurityPolicy ?? "not present"}
                     </dd>
@@ -653,12 +653,12 @@ function DashboardMetadataForm({
             <iframe
               title="Report embed preview"
               src={previewUrl}
-              className="h-80 w-full bg-slate-50"
+              className="h-80 w-full bg-[oklch(0.998_0.002_250)]"
               allowFullScreen
               sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
             />
           ) : (
-            <div className="flex h-48 flex-col items-center justify-center px-4 text-center text-sm text-slate-500">
+            <div className="flex h-48 flex-col items-center justify-center px-4 text-center text-sm text-[oklch(0.5_0.012_255)]">
               <p>{embedAssessment.recommendation}</p>
               {previewUrl && embedAssessment.status === "external_only" ? (
                 <a
@@ -674,7 +674,7 @@ function DashboardMetadataForm({
           )}
         </section>
 
-        <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-5">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-[oklch(0.91_0.006_250)] pt-5">
           {mode === "create" ? (
             <button
               type="button"

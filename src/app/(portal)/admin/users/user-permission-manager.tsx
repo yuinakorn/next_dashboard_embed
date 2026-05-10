@@ -23,11 +23,11 @@ const roleLabels: Record<PortalRole, string> = {
 };
 
 const roleTone: Record<PortalRole, string> = {
-  system_admin: "bg-slate-900 text-slate-50",
-  category_admin: "bg-sky-50 text-sky-800",
+  system_admin: "bg-[oklch(0.21_0.015_255)] text-[oklch(0.998_0.002_250)]",
+  category_admin: "bg-[oklch(0.978_0.012_258)] text-[oklch(0.4_0.13_260)]",
   project_manager: "bg-violet-50 text-violet-800",
   editor: "bg-amber-50 text-amber-900",
-  viewer: "bg-slate-100 text-slate-700",
+  viewer: "bg-[oklch(0.955_0.005_250)] text-[oklch(0.3_0.018_255)]",
 };
 
 const userStatusLabels = {
@@ -344,7 +344,7 @@ export function UserPermissionManager({
 
   if (!users.length) {
     return (
-      <section className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
+      <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-6 text-sm text-[oklch(0.5_0.012_255)]">
         ยังไม่มีผู้ใช้ในระบบ ผู้ใช้ SSO จะถูกเพิ่มหลังเข้าสู่ระบบสำเร็จ
       </section>
     );
@@ -356,8 +356,8 @@ export function UserPermissionManager({
         title="คิวอนุมัติ"
         description="งานที่ต้องตัดสินใจตอนนี้: ผู้ใช้ใหม่จาก SSO และคำขอ role/scope ที่รอตรวจ"
       >
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-100 text-left text-xs uppercase tracking-[0.08em] text-slate-500">
+        <table className="min-w-full divide-y divide-[oklch(0.91_0.006_250)] text-sm">
+          <thead className="bg-[oklch(0.955_0.005_250)] text-left text-xs uppercase tracking-[0.08em] text-[oklch(0.5_0.012_255)]">
             <tr>
               <th className="px-4 py-3 font-semibold">ประเภท</th>
               <th className="px-4 py-3 font-semibold">ผู้ใช้</th>
@@ -367,7 +367,7 @@ export function UserPermissionManager({
               <th className="px-4 py-3 font-semibold">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-[oklch(0.91_0.006_250)]">
             {approvalQueue.length ? (
               approvalQueue.slice(0, 20).map((item) => {
                 if (item.kind === "access_request") {
@@ -380,14 +380,14 @@ export function UserPermissionManager({
                         <Badge className="bg-amber-100 text-amber-900">คำขอสิทธิ์</Badge>
                       </td>
                       <td className="px-4 py-4 align-top">
-                        <p className="font-semibold text-slate-950">{request.userName}</p>
-                        <p className="mt-1 text-xs text-slate-500">{request.userDepartment}</p>
+                        <p className="font-semibold text-[oklch(0.21_0.015_255)]">{request.userName}</p>
+                        <p className="mt-1 text-xs text-[oklch(0.5_0.012_255)]">{request.userDepartment}</p>
                         {user ? (
-                          <p className="mt-1 text-xs font-semibold text-slate-500">
+                          <p className="mt-1 text-xs font-semibold text-[oklch(0.5_0.012_255)]">
                             บัญชี: {userStatusLabels[user.status ?? "active"]}
                           </p>
                         ) : null}
-                        <p className="mt-2 line-clamp-2 max-w-xs text-xs leading-5 text-slate-500">
+                        <p className="mt-2 line-clamp-2 max-w-xs text-xs leading-5 text-[oklch(0.5_0.012_255)]">
                           {request.reason}
                         </p>
                       </td>
@@ -400,7 +400,7 @@ export function UserPermissionManager({
                           ))}
                         </div>
                       </td>
-                      <td className="px-4 py-4 align-top text-slate-600">
+                      <td className="px-4 py-4 align-top text-[oklch(0.5_0.012_255)]">
                         {request.requestedCategoryIds.length
                           ? `${request.requestedCategoryIds.length} หมวด`
                           : "All public / team defaults"}
@@ -444,15 +444,15 @@ export function UserPermissionManager({
                 const user = item.user;
 
                 return (
-                  <tr key={item.id} className="bg-sky-50/40">
+                  <tr key={item.id} className="bg-[oklch(0.978_0.012_258)]/40">
                     <td className="px-4 py-4 align-top">
-                      <Badge className="bg-sky-100 text-sky-900">ผู้ใช้ใหม่</Badge>
+                      <Badge className="bg-[oklch(0.95_0.028_258)] text-[oklch(0.32_0.11_262)]">ผู้ใช้ใหม่</Badge>
                     </td>
                     <td className="px-4 py-4 align-top">
-                      <p className="font-semibold text-slate-950">{user.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">{teamNames.get(user.teamId) ?? user.department}</p>
-                      <p className="mt-1 font-mono text-xs text-slate-400">{user.id}</p>
-                      <p className="mt-2 max-w-xs text-xs leading-5 text-slate-500">
+                      <p className="font-semibold text-[oklch(0.21_0.015_255)]">{user.name}</p>
+                      <p className="mt-1 text-xs text-[oklch(0.5_0.012_255)]">{teamNames.get(user.teamId) ?? user.department}</p>
+                      <p className="mt-1 font-mono text-xs text-[oklch(0.66_0.01_255)]">{user.id}</p>
+                      <p className="mt-2 max-w-xs text-xs leading-5 text-[oklch(0.5_0.012_255)]">
                         Login ผ่าน SSO แล้ว แต่ยังไม่ได้ส่งคำขอ role/scope
                       </p>
                     </td>
@@ -465,12 +465,12 @@ export function UserPermissionManager({
                         ))}
                       </div>
                     </td>
-                    <td className="px-4 py-4 align-top text-slate-600">
+                    <td className="px-4 py-4 align-top text-[oklch(0.5_0.012_255)]">
                       {scopedCategoryIds(user).length
                         ? `${scopedCategoryIds(user).length} หมวด`
                         : "All public / team defaults"}
                     </td>
-                    <td className="px-4 py-4 align-top font-semibold text-sky-900">
+                    <td className="px-4 py-4 align-top font-semibold text-[oklch(0.32_0.11_262)]">
                       {userStatusLabels[user.status ?? "active"]}
                     </td>
                     <td className="px-4 py-4 align-top">
@@ -505,8 +505,8 @@ export function UserPermissionManager({
                 );
               })
             ) : (
-              <tr className="bg-slate-50">
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+              <tr className="bg-[oklch(0.998_0.002_250)]">
+                <td colSpan={6} className="px-4 py-6 text-center text-[oklch(0.5_0.012_255)]">
                   ไม่มีงานรออนุมัติ
                 </td>
               </tr>
@@ -519,8 +519,8 @@ export function UserPermissionManager({
         title="ผู้ใช้ในระบบ"
         description="รายการนี้มาจากผู้ใช้ seed และผู้ใช้ที่ login ผ่าน SSO สำเร็จ"
       >
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-100 text-left text-xs uppercase tracking-[0.08em] text-slate-500">
+        <table className="min-w-full divide-y divide-[oklch(0.91_0.006_250)] text-sm">
+          <thead className="bg-[oklch(0.955_0.005_250)] text-left text-xs uppercase tracking-[0.08em] text-[oklch(0.5_0.012_255)]">
             <tr>
               <th className="px-4 py-3 font-semibold">ผู้ใช้</th>
               <th className="px-4 py-3 font-semibold">ทีม</th>
@@ -529,18 +529,18 @@ export function UserPermissionManager({
               <th className="px-4 py-3 font-semibold">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-[oklch(0.91_0.006_250)]">
             {users.map((user) => (
-              <tr key={user.id} className={user.id === selectedUser?.id ? "bg-sky-50/50" : "bg-slate-50"}>
+              <tr key={user.id} className={user.id === selectedUser?.id ? "bg-[oklch(0.978_0.012_258)]/50" : "bg-[oklch(0.998_0.002_250)]"}>
                 <td className="px-4 py-4 align-top">
-                  <p className="font-semibold text-slate-950">{user.name}</p>
-                  <p className="mt-1 text-xs text-slate-500">{user.title}</p>
-                  <p className="mt-1 font-mono text-xs text-slate-400">{user.id}</p>
+                  <p className="font-semibold text-[oklch(0.21_0.015_255)]">{user.name}</p>
+                  <p className="mt-1 text-xs text-[oklch(0.5_0.012_255)]">{user.title}</p>
+                  <p className="mt-1 font-mono text-xs text-[oklch(0.66_0.01_255)]">{user.id}</p>
                 </td>
-                <td className="px-4 py-4 align-top text-slate-600">
+                <td className="px-4 py-4 align-top text-[oklch(0.5_0.012_255)]">
                   <p>{teamNames.get(user.teamId) ?? user.teamId}</p>
-                  <p className="mt-1 text-xs text-slate-400">{user.source}</p>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                  <p className="mt-1 text-xs text-[oklch(0.66_0.01_255)]">{user.source}</p>
+                  <p className="mt-1 text-xs font-semibold text-[oklch(0.5_0.012_255)]">
                     {userStatusLabels[user.status ?? "active"]}
                   </p>
                   {queuedUserIds.has(user.id) ? (
@@ -556,7 +556,7 @@ export function UserPermissionManager({
                     ))}
                   </div>
                 </td>
-                <td className="px-4 py-4 align-top text-slate-600">
+                <td className="px-4 py-4 align-top text-[oklch(0.5_0.012_255)]">
                   {scopedCategoryIds(user).length || "All public / team defaults"}
                 </td>
                 <td className="px-4 py-4 align-top">
@@ -575,24 +575,24 @@ export function UserPermissionManager({
       </TableShell>
 
       {selectedUser ? (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/25">
+        <div className="fixed inset-0 z-50 flex justify-end bg-[oklch(0.21_0.015_255)]/25">
           <button
             type="button"
             className="absolute inset-0 cursor-default"
             aria-label="ปิดตัวแก้สิทธิ์"
             onClick={closePermissionEditor}
           />
-          <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-slate-200 bg-slate-50 shadow-2xl">
-            <div className="border-b border-slate-200 bg-white px-5 py-4">
+          <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] shadow-2xl">
+            <div className="border-b border-[oklch(0.91_0.006_250)] bg-white px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.66_0.01_255)]">
                     Permission editor
                   </p>
-                  <h2 className="mt-2 truncate text-xl font-semibold text-slate-950">
+                  <h2 className="mt-2 truncate text-xl font-semibold text-[oklch(0.21_0.015_255)]">
                     {selectedUser.name}
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">{selectedUser.department}</p>
+                  <p className="mt-1 text-sm text-[oklch(0.5_0.012_255)]">{selectedUser.department}</p>
                 </div>
                 <button
                   type="button"
@@ -602,20 +602,20 @@ export function UserPermissionManager({
                   ปิด
                 </button>
               </div>
-              <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
-                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold text-slate-400">สถานะบัญชี</p>
-                  <p className="mt-1 font-semibold text-slate-800">
+              <div className="mt-4 grid gap-2 text-sm text-[oklch(0.5_0.012_255)] sm:grid-cols-3">
+                <div className="rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3">
+                  <p className="text-xs font-semibold text-[oklch(0.66_0.01_255)]">สถานะบัญชี</p>
+                  <p className="mt-1 font-semibold text-[oklch(0.3_0.018_255)]">
                     {userStatusLabels[selectedUser.status ?? "active"]}
                   </p>
                 </div>
-                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold text-slate-400">แหล่งที่มา</p>
-                  <p className="mt-1 font-semibold text-slate-800">{selectedUser.source}</p>
+                <div className="rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3">
+                  <p className="text-xs font-semibold text-[oklch(0.66_0.01_255)]">แหล่งที่มา</p>
+                  <p className="mt-1 font-semibold text-[oklch(0.3_0.018_255)]">{selectedUser.source}</p>
                 </div>
-                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold text-slate-400">Scope</p>
-                  <p className="mt-1 font-semibold text-slate-800">
+                <div className="rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3">
+                  <p className="text-xs font-semibold text-[oklch(0.66_0.01_255)]">Scope</p>
+                  <p className="mt-1 font-semibold text-[oklch(0.3_0.018_255)]">
                     {scopeDraft.length ? `${scopeDraft.length} หมวด` : "Default"}
                   </p>
                 </div>
@@ -624,16 +624,16 @@ export function UserPermissionManager({
 
             <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
               <section>
-                <h3 className="text-sm font-semibold text-slate-900">Roles</h3>
+                <h3 className="text-sm font-semibold text-[oklch(0.21_0.015_255)]">Roles</h3>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {roles.map((role) => (
                     <label
                       key={role}
-                      className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                      className="flex items-center gap-2 rounded-md border border-[oklch(0.91_0.006_250)] bg-white px-3 py-2 text-sm text-[oklch(0.3_0.018_255)]"
                     >
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
+                        className="h-4 w-4 rounded border-[oklch(0.85_0.008_250)]"
                         checked={roleDraft.includes(role)}
                         onChange={() => toggleRole(role)}
                       />
@@ -645,17 +645,17 @@ export function UserPermissionManager({
 
               <section>
                 <div className="flex items-end justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-slate-900">Category scope</h3>
-                  <span className="text-xs font-semibold text-slate-500">
+                  <h3 className="text-sm font-semibold text-[oklch(0.21_0.015_255)]">Category scope</h3>
+                  <span className="text-xs font-semibold text-[oklch(0.5_0.012_255)]">
                     {scopeDraft.length ? `${scopeDraft.length} / ${categories.length} หมวด` : "ใช้ค่า default"}
                   </span>
                 </div>
 
-                <div className="mt-3 rounded-md border border-slate-200 bg-white">
-                  <div className="space-y-3 border-b border-slate-200 p-3">
+                <div className="mt-3 rounded-md border border-[oklch(0.91_0.006_250)] bg-white">
+                  <div className="space-y-3 border-b border-[oklch(0.91_0.006_250)] p-3">
                     <input
                       type="search"
-                      className="h-9 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm outline-none transition duration-200 placeholder:text-slate-400 focus:border-sky-700 focus:ring-2 focus:ring-sky-100"
+                      className="h-9 w-full rounded-md border border-[oklch(0.85_0.008_250)] bg-[oklch(0.998_0.002_250)] px-3 text-sm outline-none transition duration-200 placeholder:text-[oklch(0.66_0.01_255)] focus:border-[oklch(0.4_0.13_260)] focus:ring-2 focus:ring-[oklch(0.95_0.028_258)]"
                       value={categoryQuery}
                       onChange={(event) => setCategoryQuery(event.target.value)}
                       placeholder="ค้นหาหมวดรายงาน"
@@ -690,7 +690,7 @@ export function UserPermissionManager({
                         ล้าง
                       </button>
                     </div>
-                    <p className="text-xs leading-5 text-slate-500">
+                    <p className="text-xs leading-5 text-[oklch(0.5_0.012_255)]">
                       เลือกหมวดแม่เพื่อรวมหมวดย่อยทั้งหมดในสาขานั้น
                     </p>
                   </div>
@@ -703,20 +703,20 @@ export function UserPermissionManager({
                         return (
                           <label
                             key={category.id}
-                            className={`flex items-start gap-2 rounded-md px-2 py-1.5 text-sm text-slate-700 transition duration-200 hover:bg-slate-50 ${
+                            className={`flex items-start gap-2 rounded-md px-2 py-1.5 text-sm text-[oklch(0.3_0.018_255)] transition duration-200 hover:bg-[oklch(0.998_0.002_250)] ${
                               branchState.isPartial ? "bg-amber-50/60" : ""
                             }`}
                           >
                             <input
                               type="checkbox"
-                              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                              className="mt-0.5 h-4 w-4 rounded border-[oklch(0.85_0.008_250)]"
                               checked={branchState.isSelected}
                               onChange={() => toggleScopeBranch(category)}
                             />
                             <span className="min-w-0 flex-1" style={{ paddingLeft: category.depth * 12 }}>
                               <span className="block truncate">{category.name}</span>
                               {branchState.total > 1 ? (
-                                <span className="block text-xs text-slate-400">
+                                <span className="block text-xs text-[oklch(0.66_0.01_255)]">
                                   รวม {branchState.total} หมวดในสาขา
                                   {branchState.isPartial ? " (เลือกบางส่วน)" : ""}
                                 </span>
@@ -726,20 +726,20 @@ export function UserPermissionManager({
                         );
                       })
                     ) : (
-                      <p className="px-2 py-6 text-center text-sm text-slate-500">ไม่พบหมวดที่ค้นหา</p>
+                      <p className="px-2 py-6 text-center text-sm text-[oklch(0.5_0.012_255)]">ไม่พบหมวดที่ค้นหา</p>
                     )}
                   </div>
                 </div>
               </section>
 
               {message ? (
-                <div className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700">
+                <div className="rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-3 py-2 text-sm text-[oklch(0.3_0.018_255)]">
                   {message}
                 </div>
               ) : null}
             </div>
 
-            <div className="border-t border-slate-200 bg-white px-5 py-4">
+            <div className="border-t border-[oklch(0.91_0.006_250)] bg-white px-5 py-4">
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <button
                   type="button"
@@ -763,7 +763,7 @@ export function UserPermissionManager({
                   สลับตัวตน
                 </button>
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">
+              <p className="mt-3 text-xs leading-5 text-[oklch(0.5_0.012_255)]">
                 การบันทึกสิทธิ์จะสร้าง audit log action permission.update
                 และจะเปิดใช้งานบัญชีที่ยังรอเปิดใช้งาน
               </p>

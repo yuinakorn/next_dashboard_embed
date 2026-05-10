@@ -151,23 +151,23 @@ export function RecentlyViewedReports({ currentReport }: { currentReport: Curren
   }, [currentReport]);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-950">เปิดดูล่าสุด</h2>
+    <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4 shadow-sm">
+      <h2 className="text-lg font-semibold text-[oklch(0.21_0.015_255)]">เปิดดูล่าสุด</h2>
       {reports.length ? (
         <div className="mt-3 space-y-2">
           {reports.map((report) => (
             <Link
               key={report.id}
               href={`/dashboards/${report.id}`}
-              className="block rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm hover:border-slate-300 hover:bg-white"
+              className="block rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] px-3 py-2 text-sm hover:border-[oklch(0.85_0.008_250)] hover:bg-white"
             >
-              <span className="block truncate font-semibold text-slate-900">{report.title}</span>
-              <span className="mt-1 block truncate text-xs text-slate-500">{report.category}</span>
+              <span className="block truncate font-semibold text-[oklch(0.21_0.015_255)]">{report.title}</span>
+              <span className="mt-1 block truncate text-xs text-[oklch(0.5_0.012_255)]">{report.category}</span>
             </Link>
           ))}
         </div>
       ) : (
-        <p className="mt-3 rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+        <p className="mt-3 rounded-md border border-dashed border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3 text-sm text-[oklch(0.5_0.012_255)]">
           ยังไม่มีรายการอื่นที่เปิดดูก่อนหน้า
         </p>
       )}

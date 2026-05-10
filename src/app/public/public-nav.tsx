@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 function navItemClass(isActive: boolean) {
-  return `rounded-md px-3 py-2 transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 ${
+  return `rounded-md px-3 py-2 transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[oklch(0.5_0.14_258)] ${
     isActive
-      ? "bg-slate-950 text-slate-50"
-      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+      ? "bg-[oklch(0.21_0.015_255)] text-white"
+      : "text-[oklch(0.5_0.012_255)] hover:bg-[oklch(0.955_0.005_250)] hover:text-[oklch(0.21_0.015_255)]"
   }`;
 }
 

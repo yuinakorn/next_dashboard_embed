@@ -65,17 +65,17 @@ export function DashboardEmbed({
   return (
     <div
       ref={containerRef}
-      className={`flex flex-col overflow-hidden border border-slate-200 bg-slate-50 ${
+      className={`flex flex-col overflow-hidden border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] ${
         isFullscreen ? "h-screen w-screen rounded-none" : "rounded-lg"
       }`}
     >
-      <div className="flex items-center justify-end gap-2 border-b border-slate-200 bg-white px-3 py-2">
+      <div className="flex items-center justify-end gap-2 border-b border-[oklch(0.91_0.006_250)] bg-white px-3 py-2">
         <button
           type="button"
           onClick={toggleFullscreen}
           aria-label={isFullscreen ? "ออกจากโหมดเต็มจอ" : "ขยายเต็มจอ"}
           title={isFullscreen ? "ออกจากโหมดเต็มจอ (Esc)" : "ขยายเต็มจอ"}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[oklch(0.91_0.006_250)] bg-white px-2.5 text-xs font-semibold text-[oklch(0.3_0.018_255)] transition hover:bg-[oklch(0.955_0.005_250)] hover:text-[oklch(0.21_0.015_255)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[oklch(0.4_0.13_260)]"
         >
           {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}
           <span>{isFullscreen ? "ย่อ" : "เต็มจอ"}</span>
@@ -84,7 +84,7 @@ export function DashboardEmbed({
       <iframe
         title={title}
         src={src}
-        className={`w-full bg-slate-100 ${
+        className={`w-full bg-[oklch(0.955_0.005_250)] ${
           isFullscreen ? "flex-1" : "h-[85vh] min-h-[640px]"
         }`}
         loading="lazy"

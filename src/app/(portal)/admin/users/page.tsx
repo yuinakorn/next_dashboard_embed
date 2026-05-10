@@ -24,7 +24,7 @@ export default async function AdminUsersPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-[oklch(0.968_0.006_240)] text-slate-950">
+    <main className="min-h-screen bg-[oklch(0.985_0.003_250)] text-[oklch(0.21_0.015_255)]">
       <PageHeader
         eyebrow="Admin"
         title="จัดการผู้ใช้และสิทธิ์"

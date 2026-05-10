@@ -17,9 +17,9 @@ const actionTone: Record<string, string> = {
   "dashboard.publish": "bg-emerald-50 text-emerald-800",
   "dashboard.reject": "bg-rose-50 text-rose-800",
   "dashboard.submit_review": "bg-amber-50 text-amber-900",
-  "dashboard.archive": "bg-slate-200 text-slate-700",
-  "dashboard.update": "bg-sky-50 text-sky-800",
-  "dashboard.update_embed_url": "bg-sky-50 text-sky-800",
+  "dashboard.archive": "bg-[oklch(0.91_0.006_250)] text-[oklch(0.3_0.018_255)]",
+  "dashboard.update": "bg-[oklch(0.978_0.012_258)] text-[oklch(0.4_0.13_260)]",
+  "dashboard.update_embed_url": "bg-[oklch(0.978_0.012_258)] text-[oklch(0.4_0.13_260)]",
   "category.create_child": "bg-violet-50 text-violet-800",
 };
 
@@ -90,27 +90,27 @@ function filterAuditEvents(events: AuditEvent[], filters: ReturnType<typeof norm
 
 function AuditRow({ event }: { event: AuditEvent }) {
   return (
-    <tr className="border-b border-slate-200 last:border-0 hover:bg-slate-50">
+    <tr className="border-b border-[oklch(0.91_0.006_250)] last:border-0 hover:bg-[oklch(0.998_0.002_250)]">
       <td className="min-w-56 px-4 py-4 align-top">
         <span
           className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ${
-            actionTone[event.action] ?? "bg-slate-100 text-slate-700"
+            actionTone[event.action] ?? "bg-[oklch(0.955_0.005_250)] text-[oklch(0.3_0.018_255)]"
           }`}
         >
           {event.action}
         </span>
-        <div className="mt-2 text-sm text-slate-500">{event.entityType}</div>
+        <div className="mt-2 text-sm text-[oklch(0.5_0.012_255)]">{event.entityType}</div>
       </td>
       <td className="min-w-80 px-4 py-4 align-top">
-        <div className="font-semibold text-slate-950">{event.entityTitle}</div>
-        <div className="mt-1 text-sm text-slate-500">{event.entityId}</div>
-        <p className="mt-2 text-sm leading-6 text-slate-600">{event.note}</p>
+        <div className="font-semibold text-[oklch(0.21_0.015_255)]">{event.entityTitle}</div>
+        <div className="mt-1 text-sm text-[oklch(0.5_0.012_255)]">{event.entityId}</div>
+        <p className="mt-2 text-sm leading-6 text-[oklch(0.5_0.012_255)]">{event.note}</p>
       </td>
-      <td className="px-4 py-4 align-top text-sm text-slate-600">
-        <div className="font-semibold text-slate-800">{event.actorName}</div>
+      <td className="px-4 py-4 align-top text-sm text-[oklch(0.5_0.012_255)]">
+        <div className="font-semibold text-[oklch(0.3_0.018_255)]">{event.actorName}</div>
         <div className="mt-1">{event.actorUserId}</div>
       </td>
-      <td className="px-4 py-4 align-top text-right text-sm text-slate-500">
+      <td className="px-4 py-4 align-top text-right text-sm text-[oklch(0.5_0.012_255)]">
         {new Date(event.createdAt).toLocaleString("th-TH", {
           dateStyle: "medium",
           timeStyle: "short",
@@ -133,7 +133,7 @@ export default async function AuditPage({
   const dashboardEvents = auditEvents.filter((event) => event.entityType === "dashboard").length;
 
   return (
-    <main className="min-h-screen bg-[oklch(0.968_0.006_240)] text-slate-950">
+    <main className="min-h-screen bg-[oklch(0.985_0.003_250)] text-[oklch(0.21_0.015_255)]">
       <PageHeader
         eyebrow="Governance Workflow"
         title="ประวัติ Audit"
@@ -142,7 +142,7 @@ export default async function AuditPage({
 
       <div className="mx-auto max-w-7xl space-y-6 px-5 py-6">
         {!canReadAudit ? (
-          <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
+          <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4 text-sm font-medium text-[oklch(0.3_0.018_255)]">
             ผู้ใช้จำลองปัจจุบันไม่มีสิทธิ์ `audit:read` หน้านี้แสดงไว้เพื่อดูรูปแบบเท่านั้น
           </section>
         ) : null}
@@ -164,7 +164,7 @@ export default async function AuditPage({
                 defaultValue={filters.q}
               />
             </label>
-            <select name="action" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.action}>
+            <select name="action" className={`${fieldStyles} h-11 text-[oklch(0.3_0.018_255)]`} defaultValue={filters.action}>
               <option value="all">ทุก action</option>
               {filters.actionOptions.map((action) => (
                 <option key={action} value={action}>
@@ -172,7 +172,7 @@ export default async function AuditPage({
                 </option>
               ))}
             </select>
-            <select name="entity" className={`${fieldStyles} h-11 text-slate-700`} defaultValue={filters.entity}>
+            <select name="entity" className={`${fieldStyles} h-11 text-[oklch(0.3_0.018_255)]`} defaultValue={filters.entity}>
               <option value="all">ทุกประเภทข้อมูล</option>
               {entityTypes.map((entityType) => (
                 <option key={entityType} value={entityType}>
@@ -185,7 +185,7 @@ export default async function AuditPage({
               <input
                 name="from"
                 type="date"
-                className={`${fieldStyles} h-11 w-full text-slate-700`}
+                className={`${fieldStyles} h-11 w-full text-[oklch(0.3_0.018_255)]`}
                 defaultValue={filters.from}
               />
             </label>
@@ -194,7 +194,7 @@ export default async function AuditPage({
               <input
                 name="to"
                 type="date"
-                className={`${fieldStyles} h-11 w-full text-slate-700`}
+                className={`${fieldStyles} h-11 w-full text-[oklch(0.3_0.018_255)]`}
                 defaultValue={filters.to}
               />
             </label>
@@ -209,7 +209,7 @@ export default async function AuditPage({
           description="อ่านประวัติการเปลี่ยนแปลงจาก `portal_audit_logs` โดยตรง"
         >
             <table className="w-full border-collapse text-left">
-              <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-[oklch(0.955_0.005_250)] text-xs uppercase tracking-wide text-[oklch(0.5_0.012_255)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Action</th>
                   <th className="px-4 py-3 font-semibold">ข้อมูล / หมายเหตุ</th>
@@ -224,7 +224,7 @@ export default async function AuditPage({
               </tbody>
             </table>
             {!filteredAuditEvents.length ? (
-              <div className="border-t border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+              <div className="border-t border-[oklch(0.91_0.006_250)] px-4 py-8 text-center text-sm text-[oklch(0.5_0.012_255)]">
                 ไม่พบ Audit event ที่ตรงกับเงื่อนไขการค้นหา
               </div>
             ) : null}
