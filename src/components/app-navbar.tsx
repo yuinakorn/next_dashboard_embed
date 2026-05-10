@@ -126,8 +126,8 @@ export function AppNavbar({
               DH
             </span>
             <span className="flex flex-col">
-              <span className="text-base font-semibold tracking-tight leading-tight text-[oklch(0.21_0.015_255)]">Dashboard Hub</span>
-              <span className="text-[11px] leading-tight text-[oklch(0.5_0.012_255)]">ศูนย์ข้อมูลสุขภาพ - Open Data</span>
+              <span className="text-[17px] font-semibold tracking-tight leading-tight text-[oklch(0.21_0.015_255)]">Dashboard Hub</span>
+              <span className="text-xs leading-5 text-[oklch(0.5_0.012_255)]">ศูนย์ข้อมูลสุขภาพ - Open Data</span>
             </span>
           </Link>
 
@@ -139,7 +139,7 @@ export function AppNavbar({
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={`rounded-md px-3 py-2 text-sm font-semibold transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[oklch(0.5_0.14_258)] ${
+                    className={`rounded-md px-3 py-2 text-[15px] font-semibold transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[oklch(0.5_0.14_258)] ${
                       active
                         ? "bg-[oklch(0.21_0.015_255)] text-white"
                         : "text-[oklch(0.5_0.012_255)] hover:bg-[oklch(0.955_0.005_250)] hover:text-[oklch(0.21_0.015_255)]"
@@ -167,8 +167,8 @@ export function AppNavbar({
                   {initials}
                 </span>
                 <span className="text-left">
-                  <span className="block text-sm font-semibold text-[oklch(0.21_0.015_255)] leading-tight">{userName}</span>
-                  <span className="block text-xs text-[oklch(0.5_0.012_255)] leading-tight max-w-[200px] truncate">{userTitle}</span>
+                  <span className="block text-[15px] font-semibold text-[oklch(0.21_0.015_255)] leading-tight">{userName}</span>
+                  <span className="block max-w-[220px] truncate text-[13px] leading-5 text-[oklch(0.5_0.012_255)]">{userTitle}</span>
                 </span>
                 <ChevronDownIcon open={profileOpen} />
               </button>
@@ -183,7 +183,7 @@ export function AppNavbar({
                     </span>
                     <div>
                       <p className="text-sm font-semibold text-[oklch(0.21_0.015_255)] break-words">{userName}</p>
-                      <p className="text-xs text-[oklch(0.5_0.012_255)] break-words">{userTitle}</p>
+                      <p className="text-[13px] leading-5 text-[oklch(0.5_0.012_255)] break-words">{userTitle}</p>
                     </div>
                   </div>
 
@@ -248,7 +248,7 @@ export function AppNavbar({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-[oklch(0.21_0.015_255)] truncate">{userName}</p>
-                <p className="text-xs text-[oklch(0.5_0.012_255)] truncate">{userTitle}</p>
+                <p className="truncate text-[13px] leading-5 text-[oklch(0.5_0.012_255)]">{userTitle}</p>
               </div>
             </div>
             {actions ? (

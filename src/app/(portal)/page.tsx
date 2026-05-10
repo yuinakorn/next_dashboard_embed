@@ -1,4 +1,5 @@
-import { buttonStyles, focusRing } from "@/components/dashboard-ui";
+import { buttonStyles } from "@/components/dashboard-ui";
+import { palette } from "@/lib/design-tokens";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listCategories } from "@/lib/db/categories";
 import { listDashboardsForUser } from "@/lib/db/dashboards";
@@ -6,44 +7,18 @@ import { hasPermission } from "@/lib/permissions";
 import type {
   Category,
   Dashboard,
-  DashboardProvider,
   DashboardStatus,
   PortalUser,
   SensitivityLevel,
 } from "@/lib/portal-types";
 import Link from "next/link";
-import type { ReactNode } from "react";
 
-const providerStyles: Record<DashboardProvider, string> = {
-  "Looker Studio": "border-[oklch(0.88_0.04_258)] bg-[oklch(0.978_0.012_258)] text-[oklch(0.4_0.13_260)]",
-  Superset: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  Grafana: "border-amber-200 bg-amber-50 text-amber-800",
-  Metabase: "border-cyan-200 bg-cyan-50 text-cyan-800",
-  "Power BI": "border-yellow-200 bg-yellow-50 text-yellow-900",
-  Custom: "border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] text-[oklch(0.3_0.018_255)]",
-};
-
-const statusStyles: Record<DashboardStatus, string> = {
-  draft: "bg-[oklch(0.955_0.005_250)] text-[oklch(0.3_0.018_255)]",
-  in_review: "bg-amber-50 text-amber-900",
-  published: "bg-emerald-50 text-emerald-800",
-  rejected: "bg-rose-50 text-rose-800",
-  archived: "bg-[oklch(0.91_0.006_250)] text-[oklch(0.5_0.012_255)]",
-};
-
-const statusLabels: Record<DashboardStatus, string> = {
-  draft: "ร่าง",
-  in_review: "รอตรวจสอบ",
-  published: "เผยแพร่แล้ว",
-  rejected: "ตีกลับ",
-  archived: "เก็บถาวร",
-};
-
-const sensitivityStyles: Record<SensitivityLevel, string> = {
-  public: "bg-[oklch(0.96_0.025_180)] text-[oklch(0.4_0.09_180)]",
-  internal: "bg-[oklch(0.978_0.012_258)] text-[oklch(0.4_0.13_260)]",
-  confidential: "bg-orange-50 text-orange-800",
-  restricted: "bg-rose-50 text-rose-800",
+const statusStyle: Record<DashboardStatus, { dot: string; ink: string; label: string }> = {
+  draft: { dot: palette.inkFaint, ink: palette.inkMuted, label: "ร่าง" },
+  in_review: { dot: palette.amber, ink: palette.amberDeep, label: "รอตรวจ" },
+  published: { dot: palette.emerald, ink: palette.emeraldDeep, label: "เผยแพร่" },
+  rejected: { dot: palette.rose, ink: palette.roseDeep, label: "ตีกลับ" },
+  archived: { dot: palette.inkFaint, ink: palette.inkFaint, label: "เก็บถาวร" },
 };
 
 const sensitivityLabels: Record<SensitivityLevel, string> = {
@@ -56,18 +31,9 @@ const sensitivityLabels: Record<SensitivityLevel, string> = {
 type HomeMode = "viewer" | "creator" | "reviewer" | "admin";
 
 function getHomeMode(user: PortalUser): HomeMode {
-  if (hasPermission(user, "permission:manage")) {
-    return "admin";
-  }
-
-  if (hasPermission(user, "dashboard:publish") || hasPermission(user, "dashboard:approve")) {
-    return "reviewer";
-  }
-
-  if (hasPermission(user, "dashboard:create")) {
-    return "creator";
-  }
-
+  if (hasPermission(user, "permission:manage")) return "admin";
+  if (hasPermission(user, "dashboard:publish") || hasPermission(user, "dashboard:approve")) return "reviewer";
+  if (hasPermission(user, "dashboard:create")) return "creator";
   return "viewer";
 }
 
@@ -79,23 +45,9 @@ function uniqueDashboards(dashboards: Dashboard[]) {
 }
 
 function isActionableForUser(user: PortalUser, dashboard: Dashboard) {
-  if (hasPermission(user, "category:create_root")) {
-    return true;
-  }
-
-  if (dashboard.ownerTeamId === user.teamId) {
-    return true;
-  }
-
+  if (hasPermission(user, "category:create_root")) return true;
+  if (dashboard.ownerTeamId === user.teamId) return true;
   return dashboard.ownerUserId === user.id;
-}
-
-function Badge({ children, className }: { children: ReactNode; className: string }) {
-  return (
-    <span className={`inline-flex w-fit items-center rounded-md px-2 py-1 text-xs font-semibold ${className}`}>
-      {children}
-    </span>
-  );
 }
 
 function MetricCard({
@@ -103,27 +55,56 @@ function MetricCard({
   value,
   detail,
   href,
+  accent,
 }: {
   label: string;
   value: string;
   detail: string;
   href: string;
+  accent: string;
 }) {
   return (
     <Link
       href={href}
-      className={`rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-[oklch(0.85_0.008_250)] hover:shadow-sm ${focusRing}`}
+      className="group rounded-xl px-4 py-4 transition-shadow duration-150 hover:shadow-[0_2px_12px_-4px_oklch(0.3_0.02_255/0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+      style={{
+        background: palette.paper,
+        border: `1px solid ${palette.border}`,
+        outlineColor: palette.accent,
+      }}
     >
-      <span className="text-sm font-semibold text-[oklch(0.5_0.012_255)]">{label}</span>
-      <span className="mt-3 flex items-end justify-between gap-4">
-        <strong className="text-3xl font-semibold tracking-tight text-[oklch(0.21_0.015_255)]">{value}</strong>
-        <span className="max-w-32 text-right text-sm leading-5 text-[oklch(0.5_0.012_255)]">{detail}</span>
-      </span>
+      <div className="flex items-center gap-1.5">
+        <span
+          className="inline-block h-1.5 w-1.5 rounded-full"
+          style={{ background: accent }}
+          aria-hidden="true"
+        />
+        <span
+          className="text-[13px] font-semibold tracking-wide"
+          style={{ color: palette.inkMuted }}
+        >
+          {label}
+        </span>
+      </div>
+      <div className="mt-1 flex items-end justify-between gap-3">
+        <strong
+          className="text-[26px] font-semibold leading-tight tracking-tight tabular-nums"
+          style={{ color: palette.ink }}
+        >
+          {value}
+        </strong>
+        <span
+          className="max-w-36 text-right text-[13px] leading-5"
+          style={{ color: palette.inkFaint }}
+        >
+          {detail}
+        </span>
+      </div>
     </Link>
   );
 }
 
-function RoleBadge({ role }: { role: string }) {
+function RolePill({ role }: { role: string }) {
   const label = role
     .replace("system_admin", "ผู้ดูแลระบบ")
     .replace("category_admin", "ผู้ดูแลหมวดรายงาน")
@@ -132,33 +113,61 @@ function RoleBadge({ role }: { role: string }) {
     .replace("viewer", "ผู้ดูรายงาน");
 
   return (
-    <span className="rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-3 py-2 text-sm font-semibold text-[oklch(0.3_0.018_255)]">
+    <span
+      className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold"
+      style={{ background: palette.muted, color: palette.inkMuted }}
+    >
       {label}
     </span>
   );
 }
 
-function ReportCard({ dashboard }: { dashboard: Dashboard }) {
+function ReportRow({ dashboard }: { dashboard: Dashboard }) {
+  const status = statusStyle[dashboard.status];
   const categoryPath = dashboard.categoryPath?.length
     ? dashboard.categoryPath.join(" / ")
     : dashboard.categoryName;
 
   return (
-    <article className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge className={sensitivityStyles[dashboard.sensitivity]}>
-          {sensitivityLabels[dashboard.sensitivity]}
-        </Badge>
-        <Badge className={providerStyles[dashboard.provider]}>{dashboard.provider}</Badge>
-        <Badge className={statusStyles[dashboard.status]}>{statusLabels[dashboard.status]}</Badge>
+    <article
+      className="group flex flex-col gap-3 rounded-xl px-4 py-3.5 transition-shadow duration-150 hover:shadow-[0_2px_12px_-4px_oklch(0.3_0.02_255/0.1)] sm:flex-row sm:items-center sm:justify-between"
+      style={{ background: palette.paper, border: `1px solid ${palette.border}` }}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+          <span className="inline-flex items-center gap-1.5" style={{ color: status.ink }}>
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ background: status.dot }}
+              aria-hidden="true"
+            />
+            <span className="font-semibold">{status.label}</span>
+          </span>
+          <span aria-hidden="true" style={{ color: palette.inkFaint }}>·</span>
+          <span style={{ color: palette.inkMuted }} className="font-medium">
+            {sensitivityLabels[dashboard.sensitivity]}
+          </span>
+          <span aria-hidden="true" style={{ color: palette.inkFaint }}>·</span>
+          <span style={{ color: palette.inkFaint }}>{dashboard.provider}</span>
+        </div>
+        <h3
+          className="mt-1.5 truncate text-base font-semibold leading-6"
+          style={{ color: palette.ink }}
+        >
+          {dashboard.title}
+        </h3>
+        <p className="mt-0.5 truncate text-[13px] leading-5" style={{ color: palette.inkFaint }}>
+          {categoryPath} · {dashboard.views.toLocaleString("th-TH")} ครั้ง
+        </p>
       </div>
-      <h3 className="mt-3 text-base font-semibold leading-6 text-[oklch(0.21_0.015_255)]">{dashboard.title}</h3>
-      <p className="mt-2 line-clamp-2 text-sm leading-6 text-[oklch(0.5_0.012_255)]">{dashboard.description}</p>
-      <p className="mt-3 text-xs font-semibold text-[oklch(0.5_0.012_255)]">{categoryPath}</p>
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <span className="text-sm text-[oklch(0.5_0.012_255)]">{dashboard.views.toLocaleString("th-TH")} ครั้ง</span>
-        <Link href={`/dashboards/${dashboard.id}`} className={`${buttonStyles.secondary} h-9 px-3`}>
-          เปิดรายงาน
+      <div className="flex shrink-0">
+        <Link
+          href={`/dashboards/${dashboard.id}`}
+          className="inline-flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          style={{ background: palette.ink, outlineColor: palette.accent }}
+        >
+          เปิด
+          <span aria-hidden="true">→</span>
         </Link>
       </div>
     </article>
@@ -170,31 +179,56 @@ function ReportList({
   description,
   dashboards,
   emptyText,
+  href,
 }: {
   title: string;
   description: string;
   dashboards: Dashboard[];
   emptyText: string;
+  href?: string;
 }) {
   return (
-    <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4">
-      <div className="flex items-start justify-between gap-4">
+    <section
+      className="rounded-xl p-4"
+      style={{ background: palette.paper, border: `1px solid ${palette.border}` }}
+    >
+      <header className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-[oklch(0.21_0.015_255)]">{title}</h2>
-          <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">{description}</p>
+          <h2 className="text-base font-semibold" style={{ color: palette.ink }}>
+            {title}
+            <span
+              className="ml-2 rounded px-1.5 py-0.5 text-xs font-semibold tabular-nums"
+              style={{ background: palette.muted, color: palette.inkMuted }}
+            >
+              {dashboards.length}
+            </span>
+          </h2>
+          <p className="mt-1 text-sm leading-6" style={{ color: palette.inkMuted }}>
+            {description}
+          </p>
         </div>
-        <span className="rounded-md bg-[oklch(0.955_0.005_250)] px-2 py-1 text-xs font-semibold text-[oklch(0.5_0.012_255)]">
-          {dashboards.length}
-        </span>
-      </div>
+        {href ? (
+          <Link
+            href={href}
+            className="text-sm font-semibold underline-offset-4 hover:underline"
+            style={{ color: palette.accentDeep }}
+          >
+            ดูทั้งหมด →
+          </Link>
+        ) : null}
+      </header>
+
       {dashboards.length ? (
-        <div className="mt-4 grid gap-3">
+        <div className="mt-3 grid gap-2">
           {dashboards.slice(0, 4).map((dashboard) => (
-            <ReportCard key={dashboard.id} dashboard={dashboard} />
+            <ReportRow key={dashboard.id} dashboard={dashboard} />
           ))}
         </div>
       ) : (
-        <p className="mt-4 rounded-lg border border-dashed border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4 text-sm text-[oklch(0.5_0.012_255)]">
+        <p
+          className="mt-3 rounded-lg border border-dashed px-4 py-6 text-center text-sm"
+          style={{ borderColor: palette.border, color: palette.inkMuted, background: palette.base }}
+        >
           {emptyText}
         </p>
       )}
@@ -202,42 +236,55 @@ function ReportList({
   );
 }
 
-function CategoryTree({ categories }: { categories: Category[] }) {
+function CategoryRail({ categories }: { categories: Category[] }) {
   const visibleCategories = categories.slice(0, 8);
 
   return (
-    <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4">
-      <div className="flex items-start justify-between gap-4">
+    <section
+      className="rounded-xl p-4"
+      style={{ background: palette.paper, border: `1px solid ${palette.border}` }}
+    >
+      <header className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-[oklch(0.21_0.015_255)]">หมวดรายงาน</h2>
-          <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">
-            โครงสร้างหมวดหมู่รองรับหลายระดับตามกลุ่มงานและตัวชี้วัด
+          <h2 className="text-base font-semibold" style={{ color: palette.ink }}>
+            หมวดรายงาน
+          </h2>
+          <p className="mt-1 text-sm leading-6" style={{ color: palette.inkMuted }}>
+            โครงสร้างหมวดหมู่หลายระดับตามกลุ่มงาน
           </p>
         </div>
-        <Link href="/catalog" className="text-sm font-semibold text-[#005f80] hover:text-[oklch(0.21_0.015_255)]">
-          ดูทั้งหมด
+        <Link
+          href="/catalog"
+          className="text-sm font-semibold underline-offset-4 hover:underline"
+          style={{ color: palette.accentDeep }}
+        >
+          ดูทั้งหมด →
         </Link>
-      </div>
-      <div className="mt-4 space-y-2">
+      </header>
+      <ul className="mt-3 space-y-0.5">
         {visibleCategories.map((category) => (
-          <Link
-            key={category.id}
-            href={`/catalog?category=${category.id}`}
-            className={`block rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3 transition hover:border-[oklch(0.85_0.008_250)] hover:bg-white ${focusRing}`}
-            style={{ marginLeft: `${Math.min(category.depth ?? 0, 3) * 10}px` }}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">{category.name}</span>
-              <span className="text-xs font-semibold text-[oklch(0.5_0.012_255)]">
-                {category.dashboardCount.toLocaleString("th-TH")} รายงาน
+          <li key={category.id}>
+            <Link
+              href={`/catalog?category=${category.id}`}
+              className="flex items-center justify-between gap-3 rounded-md px-3 py-2.5 text-[15px] transition-colors duration-150 hover:bg-[oklch(0.955_0.005_250)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+              style={{
+                color: palette.ink,
+                fontWeight: 500,
+                outlineColor: palette.accent,
+                paddingLeft: 12 + Math.min(category.depth ?? 0, 3) * 14,
+              }}
+            >
+              <span className="min-w-0 truncate">{category.name}</span>
+              <span
+                className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold tabular-nums"
+                style={{ background: palette.muted, color: palette.inkMuted }}
+              >
+                {category.dashboardCount.toLocaleString("th-TH")}
               </span>
-            </div>
-            {category.path?.length ? (
-              <p className="mt-1 truncate text-xs text-[oklch(0.5_0.012_255)]">{category.path.join(" / ")}</p>
-            ) : null}
-          </Link>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
@@ -245,6 +292,7 @@ function CategoryTree({ categories }: { categories: Category[] }) {
 function getHeroCopy(mode: HomeMode) {
   if (mode === "viewer") {
     return {
+      eyebrow: "หน้าหลัก · ผู้ใช้",
       title: "รายงานที่คุณเข้าถึงได้",
       description: "เปิดดูรายงานสาธารณะและรายงานภายในที่อนุญาตตามสิทธิ์ของบัญชีคุณ",
     };
@@ -252,6 +300,7 @@ function getHeroCopy(mode: HomeMode) {
 
   if (mode === "creator") {
     return {
+      eyebrow: "หน้าหลัก · ผู้จัดทำ",
       title: "จัดการรายงานของหน่วยงาน",
       description: "ติดตามร่าง รายงานที่ต้องปรับปรุง และรายงานที่เผยแพร่แล้วของทีมคุณ",
     };
@@ -259,12 +308,14 @@ function getHeroCopy(mode: HomeMode) {
 
   if (mode === "reviewer") {
     return {
+      eyebrow: "หน้าหลัก · ผู้ตรวจสอบ",
       title: "ดูแลรายงานและหมวดข้อมูล",
       description: "ติดตามความพร้อมของรายงาน หมวดข้อมูล และข้อจำกัดของ dashboard embed",
     };
   }
 
   return {
+    eyebrow: "หน้าหลัก · ผู้ดูแลระบบ",
     title: "ภาพรวมระบบรายงาน",
     description: "ติดตามสถานะรายงาน หมวดหมู่ สิทธิ์ผู้ใช้ และประวัติการเปลี่ยนแปลง",
   };
@@ -300,16 +351,42 @@ export default async function Home() {
   ]).slice(0, 4);
 
   return (
-    <main className="min-h-screen bg-[oklch(0.985_0.003_250)] text-[oklch(0.21_0.015_255)]">
-      <header className="border-b border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)]">
+    <main
+      className="min-h-screen"
+      style={{ background: palette.base, color: palette.ink }}
+    >
+      <header
+        className="border-b"
+        style={{ background: palette.paper, borderColor: palette.border }}
+      >
         <div className="mx-auto max-w-7xl px-5 py-6">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
             <div>
-              <p className="text-sm font-semibold text-[#005f80]">ระบบบริการรายงานสุขภาพ</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[oklch(0.21_0.015_255)] md:text-4xl">
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full"
+                  style={{ background: palette.accent }}
+                  aria-hidden="true"
+                />
+                <p
+                  className="text-[13px] font-semibold tracking-wide"
+                  style={{ color: palette.accentDeep }}
+                >
+                  {heroCopy.eyebrow}
+                </p>
+              </div>
+              <h1
+                className="mt-1.5 text-[30px] font-semibold leading-tight tracking-tight md:text-[34px]"
+                style={{ color: palette.ink }}
+              >
                 {heroCopy.title}
               </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-[oklch(0.5_0.012_255)]">{heroCopy.description}</p>
+              <p
+                className="mt-2 max-w-3xl text-[15px] leading-7"
+                style={{ color: palette.inkMuted }}
+              >
+                {heroCopy.description}
+              </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link href="/catalog" className={`${buttonStyles.primary} h-10`}>
                   ดูรายงานทั้งหมด
@@ -325,15 +402,28 @@ export default async function Home() {
               </div>
             </div>
 
-            <aside className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4">
-              <p className="text-sm font-semibold text-[oklch(0.5_0.012_255)]">เข้าสู่ระบบในชื่อ</p>
-              <h2 className="mt-1 text-xl font-semibold text-[oklch(0.21_0.015_255)]">{currentUser.name}</h2>
-              <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">
+            <aside
+              className="rounded-xl p-4"
+              style={{ background: palette.base, border: `1px solid ${palette.border}` }}
+            >
+              <p
+                className="text-[13px] font-semibold tracking-wide"
+                style={{ color: palette.inkMuted }}
+              >
+                เข้าสู่ระบบในชื่อ
+              </p>
+              <h2
+                className="mt-1 text-lg font-semibold leading-tight"
+                style={{ color: palette.ink }}
+              >
+                {currentUser.name}
+              </h2>
+              <p className="mt-1 text-sm leading-6" style={{ color: palette.inkMuted }}>
                 {currentUser.title} · {currentUser.department}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {currentUser.roles.map((role) => (
-                  <RoleBadge key={role} role={role} />
+                  <RolePill key={role} role={role} />
                 ))}
               </div>
             </aside>
@@ -342,34 +432,38 @@ export default async function Home() {
           <section className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               label="รายงานที่เปิดได้"
-              value={String(publishedReports.length)}
+              value={publishedReports.length.toLocaleString("th-TH")}
               detail="ตามสิทธิ์ปัจจุบัน"
               href="/catalog"
+              accent={palette.accent}
             />
             <MetricCard
               label="รายงานสาธารณะ"
-              value={String(publicReports.length)}
+              value={publicReports.length.toLocaleString("th-TH")}
               detail="ประชาชนเห็นได้"
               href="/public"
+              accent={palette.emerald}
             />
             <MetricCard
               label="ต้องเข้าสู่ระบบ"
-              value={String(loginRequiredReports.length)}
+              value={loginRequiredReports.length.toLocaleString("th-TH")}
               detail="รายงานภายใน"
               href="/catalog"
+              accent={palette.indigo}
             />
             <MetricCard
               label={canAudit ? "หมวดรายงาน" : "ทีมของฉัน"}
-              value={String(canAudit ? categories.length : myTeamReports.length)}
+              value={(canAudit ? categories.length : myTeamReports.length).toLocaleString("th-TH")}
               detail={canAudit ? "ทุกระดับชั้น" : "รายงานที่เกี่ยวข้อง"}
               href={canAudit ? "/admin/categories" : "/catalog"}
+              accent={palette.amber}
             />
           </section>
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-5 py-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-6">
+      <div className="mx-auto grid max-w-7xl gap-5 px-5 py-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-5">
           {mode === "viewer" ? (
             <>
               <ReportList
@@ -377,12 +471,14 @@ export default async function Home() {
                 description="รายงานที่เผยแพร่แล้วและเหมาะกับการเปิดดูบ่อย"
                 dashboards={recommendedReports}
                 emptyText="ยังไม่มีรายงานแนะนำในขณะนี้"
+                href="/catalog"
               />
               <ReportList
                 title="อัปเดตล่าสุด"
                 description="รายงานที่มีการปรับปรุงล่าสุดตามสิทธิ์ของคุณ"
                 dashboards={publishedReports}
                 emptyText="ยังไม่มีรายงานที่เปิดให้บัญชีนี้ดู"
+                href="/catalog?sort=updated_desc"
               />
             </>
           ) : (
@@ -392,26 +488,33 @@ export default async function Home() {
                 description="ร่าง รายงานตีกลับ และรายการที่ทีมของคุณกำลังจัดการ"
                 dashboards={myWorkingReports}
                 emptyText="ไม่มีงานค้างของทีมในขณะนี้"
+                href="/catalog?status=draft"
               />
               <ReportList
                 title="รายงานเผยแพร่ล่าสุด"
                 description="รายงานที่พร้อมเปิดดูจากระบบหลัง login"
                 dashboards={publishedReports}
                 emptyText="ยังไม่มีรายงานเผยแพร่"
+                href="/catalog?status=published"
               />
             </>
           )}
         </div>
 
-        <div className="space-y-6">
-          <CategoryTree categories={categories} />
+        <div className="space-y-5">
+          <CategoryRail categories={categories} />
           {canManageUsers ? (
-            <section className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-white p-4">
-              <h2 className="text-base font-semibold text-[oklch(0.21_0.015_255)]">ดูแลระบบ</h2>
-              <p className="mt-1 text-sm leading-6 text-[oklch(0.5_0.012_255)]">
+            <section
+              className="rounded-xl p-4"
+              style={{ background: palette.paper, border: `1px solid ${palette.border}` }}
+            >
+              <h2 className="text-base font-semibold" style={{ color: palette.ink }}>
+                ดูแลระบบ
+              </h2>
+              <p className="mt-1 text-sm leading-6" style={{ color: palette.inkMuted }}>
                 จัดการสิทธิ์ผู้ใช้ หมวดรายงาน และตรวจสอบประวัติการเปลี่ยนแปลง
               </p>
-              <div className="mt-4 grid gap-2">
+              <div className="mt-3 grid gap-2">
                 <Link href="/admin/users" className={`${buttonStyles.secondary} h-10 justify-center`}>
                   ผู้ใช้งานและสิทธิ์
                 </Link>
