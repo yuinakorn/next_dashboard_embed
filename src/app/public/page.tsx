@@ -4,6 +4,8 @@ import { listPublishedDashboardsForPortal } from "@/lib/db/dashboards";
 import Link from "next/link";
 import { CategoryGrid, PublicSignalPreview, visibleCategoryRoots } from "./public-ui";
 
+export const dynamic = "force-dynamic";
+
 export default async function PublicHome() {
   const [categories, publishedDashboards] = await Promise.all([
     listPortalCategories(),

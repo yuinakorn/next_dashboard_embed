@@ -1,6 +1,8 @@
 import { buttonStyles } from "@/components/dashboard-ui";
 import { palette } from "@/lib/design-tokens";
 import { getPublicDashboard } from "@/lib/db/dashboards";
+
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DashboardEmbed } from "./dashboard-embed";

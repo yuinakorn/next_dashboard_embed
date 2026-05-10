@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonStyles } from "@/components/dashboard-ui";
+
+export const dynamic = "force-dynamic";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { flattenCategories } from "@/lib/category-utils";
 import { listCategories } from "@/lib/db/categories";

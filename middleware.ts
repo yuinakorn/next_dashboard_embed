@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/app-origin";
 
 const portalSessionCookieName = "dashboard_hub_session";
 
@@ -39,7 +40,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const loginUrl = new URL("/login", request.url);
+  const loginUrl = getAppUrl("/login", request);
   loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
 
   return NextResponse.redirect(loginUrl);

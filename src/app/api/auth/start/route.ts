@@ -6,13 +6,14 @@ import {
   sealState,
   ssoStateCookieName,
 } from "@/lib/auth/sso-session";
+import { getAppUrl } from "@/lib/app-origin";
 
 function getRedirectUri(request: Request): string {
   if (process.env.SSO_REDIRECT_URI) {
     return process.env.SSO_REDIRECT_URI;
   }
 
-  return new URL("/api/auth/callback", request.url).toString();
+  return getAppUrl("/api/auth/callback", request).toString();
 }
 
 function getNextPath(request: Request): string {

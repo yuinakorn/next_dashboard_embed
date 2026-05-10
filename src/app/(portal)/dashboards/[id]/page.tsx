@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, buttonStyles } from "@/components/dashboard-ui";
+
+export const dynamic = "force-dynamic";
 import { DashboardViewerEmbed } from "./dashboard-viewer-embed";
 import { FavoriteButton, RecentlyViewedReports, RestoreReportButton } from "./report-actions";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";

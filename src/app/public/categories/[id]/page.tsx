@@ -1,6 +1,8 @@
 import { listPortalCategories } from "@/lib/db/categories";
 import { listPublishedDashboardsForPortal } from "@/lib/db/dashboards";
 import { notFound } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 import {
   CategoryCard,
   CategoryTree,

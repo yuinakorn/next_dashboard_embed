@@ -1,6 +1,8 @@
 import { buttonStyles } from "@/components/dashboard-ui";
 import { palette } from "@/lib/design-tokens";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
+
+export const dynamic = "force-dynamic";
 import { listCategories } from "@/lib/db/categories";
 import { listDashboardsForUser } from "@/lib/db/dashboards";
 import { hasPermission } from "@/lib/permissions";

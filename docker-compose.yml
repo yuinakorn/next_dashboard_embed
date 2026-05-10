@@ -1,0 +1,10 @@
+services:
+  web:
+    image: ghcr.io/yuinakorn/next_dashboard_embed:latest
+    ports:
+      - "3004:3000"
+    env_file:
+      - .env.prod
+    environment:
+      - TZ=Asia/Bangkok
+    restart: unless-stopped

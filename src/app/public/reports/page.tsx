@@ -1,5 +1,7 @@
 import { listPortalCategories } from "@/lib/db/categories";
 import { listPublishedDashboardsForPortal } from "@/lib/db/dashboards";
+
+export const dynamic = "force-dynamic";
 import {
   CategoryTree,
   filterDashboards,

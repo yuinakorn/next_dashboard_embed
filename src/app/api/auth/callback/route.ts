@@ -10,6 +10,7 @@ import {
   unsealState,
   type SsoTokenResponse,
 } from "@/lib/auth/sso-session";
+import { getAppUrl } from "@/lib/app-origin";
 import { upsertCurrentUser } from "@/lib/db/users";
 
 function getRedirectUri(request: Request): string {
@@ -17,7 +18,7 @@ function getRedirectUri(request: Request): string {
     return process.env.SSO_REDIRECT_URI;
   }
 
-  return new URL("/api/auth/callback", request.url).toString();
+  return getAppUrl("/api/auth/callback", request).toString();
 }
 
 function readStateContext(value: string | null): { state: string; nextPath: string } | null {
@@ -41,7 +42,7 @@ function readStateContext(value: string | null): { state: string; nextPath: stri
 }
 
 function redirectToLogin(request: Request, reason: string) {
-  const url = new URL("/login", request.url);
+  const url = getAppUrl("/login", request);
   url.searchParams.set("error", reason);
 
   const response = NextResponse.redirect(url);
@@ -99,7 +100,7 @@ export async function GET(request: Request) {
 
   const portalUser = portalUserFromSsoProfile(tokenData.user);
   await upsertCurrentUser(portalUser, "sso");
-  const response = NextResponse.redirect(new URL(expectedState.nextPath, request.url));
+  const response = NextResponse.redirect(getAppUrl(expectedState.nextPath, request));
 
   response.cookies.set(
     portalSessionCookieName,
