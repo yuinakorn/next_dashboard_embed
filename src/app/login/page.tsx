@@ -1,5 +1,6 @@
 import { buttonStyles } from "@/components/dashboard-ui";
 import Link from "next/link";
+import packageJson from "../../../package.json";
 
 type LoginPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -27,6 +28,8 @@ const errorMessages: Record<string, string> = {
   "SSO client configuration is incomplete.":
     "ระบบยังไม่พร้อมใช้งาน กรุณาติดต่อผู้ดูแลระบบ",
 };
+
+const appVersion = packageJson.version;
 
 function sanitizeError(raw: string | undefined): string | null {
   if (!raw) {
@@ -157,6 +160,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
               <p className="mt-5 text-xs leading-5 text-[oklch(0.5_0.012_255)]">
                 การเข้าสู่ระบบเป็นไปตามนโยบายความปลอดภัยของหน่วยงาน
+              </p>
+              <p className="mt-2 text-xs leading-5 text-[oklch(0.66_0.01_255)]">
+                Version {appVersion}
               </p>
 
               <div className="mt-8 border-t border-[oklch(0.91_0.006_250)] pt-6">
