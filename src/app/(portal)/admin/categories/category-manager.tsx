@@ -100,6 +100,7 @@ export function CategoryManager({
         : initialCategories.find((category) => category.status === "active")?.id ?? "",
     ),
   );
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -123,6 +124,17 @@ export function CategoryManager({
       sortOrder: String(category.sortOrder),
     });
     setCreateDraft((current) => ({ ...current, parentId: category.id }));
+    setMessage(null);
+  }
+
+  function toggleCreateDrawer(parentId = selectedCategory?.id ?? defaultParentId) {
+    setCreateDraft((current) => ({ ...current, parentId }));
+    setIsCreateDrawerOpen((current) => !current);
+    setMessage(null);
+  }
+
+  function closeCreateDrawer() {
+    setIsCreateDrawerOpen(false);
     setMessage(null);
   }
 
@@ -176,6 +188,7 @@ export function CategoryManager({
       setSelectedId(body.id ?? selectedId);
       setCreateDraft(defaultDraft(teams, defaultParentId));
       setMessage("สร้างหมวดรายงานแล้ว");
+      setIsCreateDrawerOpen(false);
     });
   }
 
@@ -371,15 +384,25 @@ export function CategoryManager({
             <h2 className="text-lg font-semibold text-slate-950">โครงสร้างหมวดรายงาน</h2>
             <p className="mt-1 text-sm text-slate-500">คลี่หมวดเพื่อเลือก แก้ไข หรือสร้างหมวดย่อย · ลากหมวดเพื่อย้ายลำดับภายในหมวดแม่เดียวกัน</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-md bg-slate-100 px-3 py-2">
-              <p className="text-xs text-slate-500">หมวดทั้งหมด</p>
-              <p className="font-semibold text-slate-950">{categories.length.toLocaleString("th-TH")}</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-md bg-slate-100 px-3 py-2">
+                <p className="text-xs text-slate-500">หมวดทั้งหมด</p>
+                <p className="font-semibold text-slate-950">{categories.length.toLocaleString("th-TH")}</p>
+              </div>
+              <div className="rounded-md bg-slate-100 px-3 py-2">
+                <p className="text-xs text-slate-500">รายงานในหมวดหลัก</p>
+                <p className="font-semibold text-slate-950">{totalReports.toLocaleString("th-TH")}</p>
+              </div>
             </div>
-            <div className="rounded-md bg-slate-100 px-3 py-2">
-              <p className="text-xs text-slate-500">รายงานในหมวดหลัก</p>
-              <p className="font-semibold text-slate-950">{totalReports.toLocaleString("th-TH")}</p>
-            </div>
+            <button
+              type="button"
+              className={`${buttonStyles.primary} h-10 justify-center whitespace-nowrap`}
+              aria-expanded={isCreateDrawerOpen}
+              onClick={() => toggleCreateDrawer()}
+            >
+              {isCreateDrawerOpen ? "ปิดการเพิ่ม" : "เพิ่มหมวดรายงาน"}
+            </button>
           </div>
         </div>
         <ul className="mt-4 space-y-1">{tree.map((node) => renderNode(node))}</ul>
@@ -472,87 +495,132 @@ export function CategoryManager({
           ) : null}
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-            สร้างหมวดรายงาน
-          </p>
-          <div className="mt-4 space-y-3">
-            <label className="block text-sm font-semibold text-slate-700">
-              ชื่อหมวด
-              <input
-                className={`${fieldStyles} mt-1 h-10 w-full`}
-                value={createDraft.name}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, name: event.target.value }))
-                }
-                placeholder="เช่น คุณภาพข้อมูล"
-              />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              หมวดแม่
-              <select
-                className={`${fieldStyles} mt-1 h-10 w-full`}
-                value={createDraft.parentId}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, parentId: event.target.value }))
-                }
-              >
-                {canCreateRoot ? <option value="">หมวดหลัก</option> : null}
-                {activeParentOptions.map((category) => {
-                  const node = findNode(tree, category.id);
-                  return (
-                    <option key={category.id} value={category.id}>
-                      {"- ".repeat(node?.depth ?? 0)}
-                      {category.name}
-                    </option>
-                  );
-                })}
-              </select>
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              หน่วยงานเจ้าของ
-              <select
-                className={`${fieldStyles} mt-1 h-10 w-full`}
-                value={createDraft.ownerTeamId}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, ownerTeamId: event.target.value }))
-                }
-              >
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              ลำดับ
-              <input
-                className={`${fieldStyles} mt-1 h-10 w-full`}
-                type="number"
-                value={createDraft.sortOrder}
-                onChange={(event) =>
-                  setCreateDraft((current) => ({ ...current, sortOrder: event.target.value }))
-                }
-              />
-            </label>
-            <button
-              type="button"
-              className={`${buttonStyles.secondary} h-10 w-full justify-center`}
-              disabled={isPending}
-              onClick={createCategory}
-            >
-              {isPending ? "กำลังสร้าง" : "สร้างหมวดรายงาน"}
-            </button>
-          </div>
-        </section>
-
         {message ? (
           <div className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700">
             {message}
           </div>
         ) : null}
       </aside>
+
+      {isCreateDrawerOpen ? (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/25">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            aria-label="ปิดแผงเพิ่มหมวดรายงาน"
+            onClick={closeCreateDrawer}
+          />
+          <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-slate-200 bg-slate-50 shadow-2xl">
+            <div className="border-b border-slate-200 bg-white px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    เพิ่มหมวดรายงาน
+                  </p>
+                  <h2 className="mt-2 truncate text-xl font-semibold text-slate-950">
+                    สร้างหมวดรายงานใหม่
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    เลือกหมวดแม่และหน่วยงานเจ้าของก่อนบันทึก
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={`${buttonStyles.secondary} h-9 px-3`}
+                  onClick={closeCreateDrawer}
+                >
+                  ปิด
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-5">
+              <div className="space-y-4">
+                <label className="block text-sm font-semibold text-slate-700">
+                  ชื่อหมวด
+                  <input
+                    className={`${fieldStyles} mt-1 h-10 w-full`}
+                    value={createDraft.name}
+                    onChange={(event) =>
+                      setCreateDraft((current) => ({ ...current, name: event.target.value }))
+                    }
+                    placeholder="เช่น คุณภาพข้อมูล"
+                  />
+                </label>
+                <label className="block text-sm font-semibold text-slate-700">
+                  หมวดแม่
+                  <select
+                    className={`${fieldStyles} mt-1 h-10 w-full`}
+                    value={createDraft.parentId}
+                    onChange={(event) =>
+                      setCreateDraft((current) => ({ ...current, parentId: event.target.value }))
+                    }
+                  >
+                    {canCreateRoot ? <option value="">หมวดหลัก</option> : null}
+                    {activeParentOptions.map((category) => {
+                      const node = findNode(tree, category.id);
+                      return (
+                        <option key={category.id} value={category.id}>
+                          {"- ".repeat(node?.depth ?? 0)}
+                          {category.name}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+                <label className="block text-sm font-semibold text-slate-700">
+                  หน่วยงานเจ้าของ
+                  <select
+                    className={`${fieldStyles} mt-1 h-10 w-full`}
+                    value={createDraft.ownerTeamId}
+                    onChange={(event) =>
+                      setCreateDraft((current) => ({ ...current, ownerTeamId: event.target.value }))
+                    }
+                  >
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm font-semibold text-slate-700">
+                  ลำดับ
+                  <input
+                    className={`${fieldStyles} mt-1 h-10 w-full`}
+                    type="number"
+                    value={createDraft.sortOrder}
+                    onChange={(event) =>
+                      setCreateDraft((current) => ({ ...current, sortOrder: event.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 bg-white px-5 py-4">
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <button
+                  type="button"
+                  className={`${buttonStyles.primary} h-10 justify-center`}
+                  disabled={isPending}
+                  onClick={createCategory}
+                >
+                  {isPending ? "กำลังสร้าง" : "สร้างหมวดรายงาน"}
+                </button>
+                <button
+                  type="button"
+                  className={`${buttonStyles.secondary} h-10 justify-center`}
+                  disabled={isPending}
+                  onClick={closeCreateDrawer}
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

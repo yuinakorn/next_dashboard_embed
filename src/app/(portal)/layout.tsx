@@ -16,7 +16,6 @@ export default async function PortalLayout({
       ? [
           { label: "หน้าหลัก", href: "/" },
           { label: "รายงาน", href: "/catalog" },
-          ...(canReadAudit ? [{ label: "ประวัติ Audit", href: "/audit" }] : []),
         ]
       : [{ label: "ขอสิทธิ์ใช้งาน", href: "/access-request" }];
   const extraNavItems =
@@ -30,6 +29,7 @@ export default async function PortalLayout({
           hasPermission(currentUser, "category:create_child")
             ? [{ label: "หมวดรายงาน", href: "/admin/categories" }]
             : []),
+          ...(canReadAudit ? [{ label: "ประวัติ Audit", href: "/audit" }] : []),
         ]
       : [];
 
