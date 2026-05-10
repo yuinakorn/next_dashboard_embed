@@ -148,7 +148,7 @@ export function PublicSignalPreview({
             className="text-[11px] font-semibold uppercase tracking-[0.16em]"
             style={{ color: palette.inkMuted }}
           >
-            At a glance
+            Open Data Portal
           </p>
           <h2
             className="mt-1 line-clamp-2 text-lg font-semibold leading-tight tracking-tight"
