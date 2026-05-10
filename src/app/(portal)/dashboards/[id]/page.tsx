@@ -142,7 +142,6 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
             <div className="flex flex-col gap-2 border-b border-[oklch(0.91_0.006_250)] px-4 py-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-[oklch(0.21_0.015_255)]">พื้นที่แสดงรายงาน</h2>
-                <p className="mt-1 text-sm text-[oklch(0.5_0.012_255)]">{dashboard.embedStatusReason}</p>
               </div>
               {dashboard.externalUrl ? (
                 <a
@@ -178,7 +177,6 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
           <DashboardViewerEmbed
             title={dashboard.title}
             src={dashboard.embedUrl}
-            reason={dashboard.embedStatusReason}
             externalUrl={dashboard.externalUrl}
           />
         )}
