@@ -81,6 +81,58 @@ export function FavoriteButton({
   );
 }
 
+export function RestoreReportButton({ dashboardId }: { dashboardId: string }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function restoreReport() {
+    const confirmed = window.confirm("กู้คืนรายงานนี้กลับเป็นสถานะร่างหรือไม่");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPending(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/dashboards/${dashboardId}/lifecycle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "restore",
+          note: "Restored from report detail page.",
+        }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Unable to restore report");
+      }
+
+      window.location.reload();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "ไม่สามารถกู้คืนรายงานได้");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        className={`${buttonStyles.primary} h-9 px-3 text-xs`}
+        disabled={pending}
+        onClick={restoreReport}
+      >
+        {pending ? "กำลังกู้คืน" : "กู้คืนรายงาน"}
+      </button>
+      {error ? <span className="text-xs text-rose-600">{error}</span> : null}
+    </div>
+  );
+}
+
 export function RecentlyViewedReports({ currentReport }: { currentReport: CurrentReport }) {
   const [reports, setReports] = useState<RecentReport[]>([]);
 

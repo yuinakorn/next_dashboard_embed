@@ -9,22 +9,29 @@ export default async function PortalLayout({
   children: React.ReactNode;
 }) {
   const currentUser = await requireCurrentUser();
+  const userStatus = currentUser.status ?? "active";
   const canReadAudit = hasPermission(currentUser, "audit:read");
-  const navItems = [
-    { label: "หน้าหลัก", href: "/" },
-    { label: "รายงาน", href: "/catalog" },
-    ...(canReadAudit ? [{ label: "ประวัติ Audit", href: "/audit" }] : []),
-  ];
-  const extraNavItems = [
-    ...(hasPermission(currentUser, "permission:manage")
-      ? [{ label: "ผู้ใช้งาน", href: "/admin/users" }]
-      : []),
-    ...(hasPermission(currentUser, "category:update") ||
-    hasPermission(currentUser, "category:create_root") ||
-    hasPermission(currentUser, "category:create_child")
-      ? [{ label: "หมวดรายงาน", href: "/admin/categories" }]
-      : []),
-  ];
+  const navItems =
+    userStatus === "active"
+      ? [
+          { label: "หน้าหลัก", href: "/" },
+          { label: "รายงาน", href: "/catalog" },
+          ...(canReadAudit ? [{ label: "ประวัติ Audit", href: "/audit" }] : []),
+        ]
+      : [{ label: "ขอสิทธิ์ใช้งาน", href: "/access-request" }];
+  const extraNavItems =
+    userStatus === "active"
+      ? [
+          ...(hasPermission(currentUser, "permission:manage")
+            ? [{ label: "ผู้ใช้งาน", href: "/admin/users" }]
+            : []),
+          ...(hasPermission(currentUser, "category:update") ||
+          hasPermission(currentUser, "category:create_root") ||
+          hasPermission(currentUser, "category:create_child")
+            ? [{ label: "หมวดรายงาน", href: "/admin/categories" }]
+            : []),
+        ]
+      : [];
 
   return (
     <>

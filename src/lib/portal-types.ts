@@ -23,6 +23,10 @@ export type RefreshFrequency = "unknown" | "daily" | "weekly" | "monthly" | "man
 
 export type CategoryStatus = "active" | "inactive" | "archived";
 
+export type PortalUserStatus = "pending" | "active" | "suspended";
+
+export type AccessRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+
 export type PortalPermission =
   | "category:create_root"
   | "category:create_child"
@@ -34,6 +38,7 @@ export type PortalPermission =
   | "dashboard:approve"
   | "dashboard:publish"
   | "dashboard:archive"
+  | "dashboard:restore"
   | "dashboard:pin"
   | "permission:manage"
   | "audit:read";
@@ -49,6 +54,7 @@ export type PortalUser = {
   title: string;
   department: string;
   teamId: string;
+  status?: PortalUserStatus;
   roles: PortalRole[];
   scopes: TeamScope[];
   impersonatedBy?: {
@@ -76,6 +82,7 @@ export type Dashboard = {
   categoryId: string;
   categoryName: string;
   categoryPath?: string[];
+  categoryAncestorIds?: string[];
   ownerUserId: string;
   owner: string;
   ownerTeamId: string;

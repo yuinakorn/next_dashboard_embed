@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { flattenCategories } from "@/lib/category-utils";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listCategories } from "@/lib/db/categories";
-import { allPortalRoles, listManagedUsers, listTeams } from "@/lib/db/users";
+import { allPortalRoles, listAccessRequests, listManagedUsers, listTeams } from "@/lib/db/users";
 import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/dashboard-ui";
 import { UserPermissionManager } from "./user-permission-manager";
@@ -16,10 +16,11 @@ export default async function AdminUsersPage() {
     notFound();
   }
 
-  const [users, teams, categories] = await Promise.all([
+  const [users, teams, categories, accessRequests] = await Promise.all([
     listManagedUsers(),
     listTeams(),
     listCategories(),
+    listAccessRequests(),
   ]);
 
   return (
@@ -40,6 +41,7 @@ export default async function AdminUsersPage() {
           teams={teams}
           roles={allPortalRoles()}
           categories={flattenCategories(categories)}
+          accessRequests={accessRequests}
         />
       </div>
     </main>

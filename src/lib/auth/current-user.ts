@@ -53,6 +53,7 @@ async function applyStoredPermissions(user: PortalUser): Promise<PortalUser> {
     return {
       ...user,
       teamId: storedUser.teamId,
+      status: storedUser.status,
       roles: storedUser.roles,
       scopes: storedUser.scopes,
     };

@@ -293,6 +293,12 @@ GROUP BY c.id;
 - breadcrumb ต้องรองรับความลึกมากกว่า 2 ชั้น
 - หน้า public ไม่ควรใช้ภาษาว่า create dashboard หรือ dashboard competition
 
+## Implementation Progress
+
+- เพิ่ม full category path และ category ancestor ids ใน report query เพื่อรองรับหมวดหลายชั้น
+- หน้า home และ catalog หลัง login ใช้ query ตามผู้ใช้ปัจจุบัน แทนการดึงรายงานทั้งหมดแล้วค่อยกรองบนหน้า
+- กติกา permission ของ report ใช้ scope ของหมวดแม่ครอบคลุมรายงานในหมวดย่อยได้
+
 ## Suggested First Implementation Scope
 
 รอบแรกควรทำเฉพาะแกนข้อมูลและ public navigation:
@@ -310,4 +316,3 @@ GROUP BY c.id;
 - API catalog
 - complex many-to-many report/category mapping
 - rename table ทั้งระบบจาก dashboard เป็น report หากยังไม่จำเป็น
-

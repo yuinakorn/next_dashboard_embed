@@ -1,7 +1,7 @@
 import { buttonStyles, focusRing } from "@/components/dashboard-ui";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listCategories } from "@/lib/db/categories";
-import { listDashboards } from "@/lib/db/dashboards";
+import { listDashboardsForUser } from "@/lib/db/dashboards";
 import { hasPermission } from "@/lib/permissions";
 import type {
   Category,
@@ -273,7 +273,7 @@ function getHeroCopy(mode: HomeMode) {
 export default async function Home() {
   const currentUser = await requireCurrentUser();
   const [dashboards, categories] = await Promise.all([
-    listDashboards(currentUser.id),
+    listDashboardsForUser(currentUser),
     listCategories(),
   ]);
 

@@ -16,6 +16,7 @@ const rolePermissions: Record<PortalRole, PortalPermission[]> = {
     "dashboard:update_team",
     "dashboard:publish",
     "dashboard:archive",
+    "dashboard:restore",
     "dashboard:pin",
     "permission:manage",
     "audit:read",
@@ -27,6 +28,7 @@ const rolePermissions: Record<PortalRole, PortalPermission[]> = {
     "dashboard:update_team",
     "dashboard:publish",
     "dashboard:archive",
+    "dashboard:restore",
     "dashboard:pin",
     "audit:read",
   ],
@@ -45,7 +47,19 @@ export function getUserPermissions(user: PortalUser): PortalPermission[] {
 }
 
 export function hasPermission(user: PortalUser, permission: PortalPermission): boolean {
+  if ((user.status ?? "active") !== "active") {
+    return false;
+  }
+
   return getUserPermissions(user).includes(permission);
+}
+
+function hasScopedCategory(user: PortalUser, dashboard: Dashboard): boolean {
+  const reportCategoryIds = new Set([dashboard.categoryId, ...(dashboard.categoryAncestorIds ?? [])]);
+
+  return user.scopes.some((scope) =>
+    scope.categoryIds.some((categoryId) => reportCategoryIds.has(categoryId)),
+  );
 }
 
 export function canManageCategory(user: PortalUser, category: Category): boolean {
@@ -91,6 +105,10 @@ export function canUpdateDashboard(user: PortalUser, dashboard: Dashboard): bool
     return true;
   }
 
+  if (hasPermission(user, "dashboard:update_team") && hasScopedCategory(user, dashboard)) {
+    return true;
+  }
+
   return hasPermission(user, "dashboard:update_own") && dashboard.ownerUserId === user.id;
 }
 
@@ -109,7 +127,7 @@ export function canPublishDashboard(user: PortalUser, dashboard: Dashboard): boo
 
   return (
     hasPermission(user, "category:create_root") ||
-    user.scopes.some((scope) => scope.categoryIds.includes(dashboard.categoryId))
+    hasScopedCategory(user, dashboard)
   );
 }
 
@@ -122,12 +140,39 @@ export function canArchiveDashboard(user: PortalUser, dashboard: Dashboard): boo
     return dashboard.status !== "archived";
   }
 
-  return dashboard.status !== "archived" && dashboard.ownerTeamId === user.teamId;
+  return (
+    dashboard.status !== "archived" &&
+    (dashboard.ownerTeamId === user.teamId || hasScopedCategory(user, dashboard))
+  );
+}
+
+export function canRestoreDashboard(user: PortalUser, dashboard: Dashboard): boolean {
+  if (!hasPermission(user, "dashboard:restore")) {
+    return false;
+  }
+
+  if (dashboard.status !== "archived") {
+    return false;
+  }
+
+  if (hasPermission(user, "category:create_root")) {
+    return true;
+  }
+
+  return dashboard.ownerTeamId === user.teamId || hasScopedCategory(user, dashboard);
 }
 
 export function canViewDashboard(user: PortalUser, dashboard: Dashboard): boolean {
+  if ((user.status ?? "active") === "suspended") {
+    return false;
+  }
+
   if (dashboard.status === "published" && dashboard.sensitivity === "public") {
     return true;
+  }
+
+  if ((user.status ?? "active") !== "active") {
+    return false;
   }
 
   if (hasPermission(user, "category:create_root")) {
@@ -138,5 +183,9 @@ export function canViewDashboard(user: PortalUser, dashboard: Dashboard): boolea
     return true;
   }
 
-  return dashboard.ownerTeamId === user.teamId;
+  return (
+    dashboard.ownerUserId === user.id ||
+    dashboard.ownerTeamId === user.teamId ||
+    hasScopedCategory(user, dashboard)
+  );
 }

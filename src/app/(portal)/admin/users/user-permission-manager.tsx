@@ -3,14 +3,15 @@
 import { useMemo, useState, useTransition } from "react";
 import { Badge, TableShell, buttonStyles } from "@/components/dashboard-ui";
 import type { CategoryOption } from "@/lib/category-utils";
-import type { PortalRole } from "@/lib/portal-types";
-import type { ManagedPortalUser, PortalTeam } from "@/lib/db/users";
+import type { AccessRequestStatus, PortalRole } from "@/lib/portal-types";
+import type { AccessRequest, ManagedPortalUser, PortalTeam } from "@/lib/db/users";
 
 type UserPermissionManagerProps = {
   users: ManagedPortalUser[];
   teams: PortalTeam[];
   roles: PortalRole[];
   categories: CategoryOption[];
+  accessRequests: AccessRequest[];
 };
 
 const roleLabels: Record<PortalRole, string> = {
@@ -29,6 +30,19 @@ const roleTone: Record<PortalRole, string> = {
   viewer: "bg-slate-100 text-slate-700",
 };
 
+const userStatusLabels = {
+  pending: "รออนุมัติ",
+  active: "ใช้งานได้",
+  suspended: "ระงับ",
+};
+
+const requestStatusLabels: Record<AccessRequestStatus, string> = {
+  pending: "รอดำเนินการ",
+  approved: "อนุมัติแล้ว",
+  rejected: "ปฏิเสธ",
+  cancelled: "ยกเลิก",
+};
+
 function scopedCategoryIds(user: ManagedPortalUser) {
   return user.scopes.flatMap((scope) => scope.categoryIds);
 }
@@ -38,6 +52,7 @@ export function UserPermissionManager({
   teams,
   roles,
   categories,
+  accessRequests,
 }: UserPermissionManagerProps) {
   const [selectedUserId, setSelectedUserId] = useState(users[0]?.id ?? "");
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
@@ -125,6 +140,35 @@ export function UserPermissionManager({
     });
   }
 
+  function reviewRequest(requestId: string, decision: "approve" | "reject") {
+    const note =
+      decision === "reject"
+        ? window.prompt("ระบุเหตุผลที่ปฏิเสธคำขอ") ?? ""
+        : window.prompt("หมายเหตุประกอบการอนุมัติ", "อนุมัติสิทธิ์ตามคำขอ") ?? "";
+
+    if (decision === "reject" && note.trim().length < 5) {
+      setMessage("กรุณาระบุเหตุผลเมื่อปฏิเสธคำขอ");
+      return;
+    }
+
+    setMessage(null);
+    startTransition(async () => {
+      const response = await fetch(`/api/admin/access-requests/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, note }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setMessage(body?.error ?? "ไม่สามารถดำเนินการคำขอได้");
+        return;
+      }
+
+      window.location.reload();
+    });
+  }
+
   if (!users.length) {
     return (
       <section className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
@@ -134,7 +178,89 @@ export function UserPermissionManager({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="space-y-6">
+      <TableShell
+        title="คำขอสิทธิ์"
+        description="อนุมัติหรือปฏิเสธคำขอใช้งานจากผู้ใช้ใหม่และผู้ใช้ที่ต้องการขอบเขตเพิ่ม"
+      >
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-100 text-left text-xs uppercase tracking-[0.08em] text-slate-500">
+            <tr>
+              <th className="px-4 py-3 font-semibold">ผู้ขอ</th>
+              <th className="px-4 py-3 font-semibold">Role ที่ขอ</th>
+              <th className="px-4 py-3 font-semibold">Scope</th>
+              <th className="px-4 py-3 font-semibold">เหตุผล</th>
+              <th className="px-4 py-3 font-semibold">สถานะ</th>
+              <th className="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {accessRequests.length ? (
+              accessRequests.slice(0, 20).map((request) => (
+                <tr key={request.id} className={request.status === "pending" ? "bg-amber-50/40" : "bg-slate-50"}>
+                  <td className="px-4 py-4 align-top">
+                    <p className="font-semibold text-slate-950">{request.userName}</p>
+                    <p className="mt-1 text-xs text-slate-500">{request.userDepartment}</p>
+                  </td>
+                  <td className="px-4 py-4 align-top">
+                    <div className="flex flex-wrap gap-1">
+                      {request.requestedRoles.map((role) => (
+                        <Badge key={role} className={roleTone[role]}>
+                          {roleLabels[role]}
+                        </Badge>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 align-top text-slate-600">
+                    {request.requestedCategoryIds.length} หมวด
+                  </td>
+                  <td className="max-w-xs px-4 py-4 align-top text-slate-600">
+                    <p className="line-clamp-3">{request.reason}</p>
+                    {request.reviewNote ? (
+                      <p className="mt-2 text-xs text-slate-400">{request.reviewNote}</p>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-4 align-top text-slate-600">
+                    {requestStatusLabels[request.status]}
+                  </td>
+                  <td className="px-4 py-4 align-top">
+                    {request.status === "pending" ? (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className={`${buttonStyles.primary} h-9 px-3`}
+                          disabled={isPending}
+                          onClick={() => reviewRequest(request.id, "approve")}
+                        >
+                          อนุมัติ
+                        </button>
+                        <button
+                          type="button"
+                          className={`${buttonStyles.secondary} h-9 px-3`}
+                          disabled={isPending}
+                          onClick={() => reviewRequest(request.id, "reject")}
+                        >
+                          ปฏิเสธ
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">ดำเนินการแล้ว</span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr className="bg-slate-50">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                  ยังไม่มีคำขอสิทธิ์
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </TableShell>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <TableShell
         title="ผู้ใช้ในระบบ"
         description="รายการนี้มาจากผู้ใช้ seed และผู้ใช้ที่ login ผ่าน SSO สำเร็จ"
@@ -160,6 +286,9 @@ export function UserPermissionManager({
                 <td className="px-4 py-4 align-top text-slate-600">
                   <p>{teamNames.get(user.teamId) ?? user.teamId}</p>
                   <p className="mt-1 text-xs text-slate-400">{user.source}</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    {userStatusLabels[user.status ?? "active"]}
+                  </p>
                 </td>
                 <td className="px-4 py-4 align-top">
                   <div className="flex flex-wrap gap-1">
@@ -266,6 +395,7 @@ export function UserPermissionManager({
           </>
         ) : null}
       </aside>
+      </div>
     </div>
   );
 }

@@ -3,15 +3,17 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   archiveDashboard,
   getDashboard,
+  restoreDashboard,
   submitDashboardForReview,
 } from "@/lib/db/dashboards";
 import {
   canArchiveDashboard,
+  canRestoreDashboard,
   canSubmitDashboardForReview,
 } from "@/lib/permissions";
 
 type LifecycleRequest = {
-  action?: "submit_review" | "archive";
+  action?: "submit_review" | "archive" | "restore";
   note?: string;
 };
 
@@ -23,8 +25,8 @@ export async function POST(
   const { id } = await params;
   const body = (await request.json().catch(() => ({}))) as LifecycleRequest;
 
-  if (body.action !== "submit_review" && body.action !== "archive") {
-    return NextResponse.json({ error: "action must be submit_review or archive" }, { status: 400 });
+  if (body.action !== "submit_review" && body.action !== "archive" && body.action !== "restore") {
+    return NextResponse.json({ error: "action must be submit_review, archive, or restore" }, { status: 400 });
   }
 
   const dashboard = await getDashboard(id, currentUser.id);
@@ -51,6 +53,26 @@ export async function POST(
       return NextResponse.json({ dashboard: submittedDashboard });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to submit dashboard for review.";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
+
+  if (body.action === "restore") {
+    if (!canRestoreDashboard(currentUser, dashboard)) {
+      return NextResponse.json({ error: "Current user cannot restore this dashboard" }, { status: 403 });
+    }
+
+    try {
+      const restoredDashboard = await restoreDashboard({
+        dashboardId: id,
+        actorUserId: currentUser.id,
+        actorName: currentUser.name,
+        note: body.note,
+      });
+
+      return NextResponse.json({ dashboard: restoredDashboard });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to restore dashboard.";
       return NextResponse.json({ error: message }, { status: 500 });
     }
   }

@@ -7,6 +7,7 @@ import type {
   DashboardProvider,
   DashboardStatus,
   EmbedStatus,
+  PortalUser,
   RefreshFrequency,
   SensitivityLevel,
 } from "@/lib/portal-types";
@@ -20,6 +21,7 @@ type DashboardRow = RowDataPacket & {
   category_name: string;
   parent_category_name: string | null;
   category_path: string | null;
+  category_ancestor_ids: string | null;
   owner_user_id: string;
   owner_team_id: string;
   owner_name: string;
@@ -89,6 +91,7 @@ export type DashboardLifecycleInput = {
 
 function rowToDashboard(row: DashboardRow): Dashboard {
   const categoryPath = row.category_path?.split(" / ").filter(Boolean) ?? [];
+  const categoryAncestorIds = row.category_ancestor_ids?.split(",").filter(Boolean) ?? [];
   const categoryName = categoryPath.length
     ? categoryPath.join(" / ")
     : row.parent_category_name
@@ -103,6 +106,7 @@ function rowToDashboard(row: DashboardRow): Dashboard {
     categoryId: row.category_id,
     categoryName,
     categoryPath: categoryPath.length ? categoryPath : undefined,
+    categoryAncestorIds: categoryAncestorIds.length ? categoryAncestorIds : undefined,
     ownerUserId: row.owner_user_id,
     owner: row.owner_name,
     ownerTeamId: row.owner_team_id,
@@ -128,8 +132,14 @@ async function queryDashboards(
     includeArchived?: boolean;
     publishedOnly?: boolean;
     publicOnly?: boolean;
+    viewer?: PortalUser;
   } = {},
 ): Promise<Dashboard[]> {
+  const scopedCategoryIds = Array.from(
+    new Set(options.viewer?.scopes.flatMap((scope) => scope.categoryIds) ?? []),
+  );
+  const viewerCategoryIds = scopedCategoryIds.length ? scopedCategoryIds : ["__no_scoped_category__"];
+
   const [rows] = await getDbPool().query<DashboardRow[]>(
     `
       SELECT
@@ -147,6 +157,11 @@ async function queryDashboards(
             ON cp.id = cpc.ancestor_id
           WHERE cpc.descendant_id = d.category_id
         ) AS category_path,
+        (
+          SELECT GROUP_CONCAT(cpc.ancestor_id ORDER BY cpc.depth DESC SEPARATOR ',')
+          FROM portal_category_closure cpc
+          WHERE cpc.descendant_id = d.category_id
+        ) AS category_ancestor_ids,
         d.owner_user_id,
         d.owner_team_id,
         d.owner_name,
@@ -174,6 +189,18 @@ async function queryDashboards(
       WHERE (:includeArchived = TRUE OR d.status <> 'archived')
         AND (:publishedOnly = FALSE OR d.status = 'published')
         AND (:publicOnly = FALSE OR (d.status = 'published' AND d.sensitivity = 'public'))
+        AND (
+          :restrictToViewer = FALSE
+          OR (d.status = 'published' AND d.sensitivity IN ('public', 'internal', 'confidential'))
+          OR d.owner_user_id = :viewerUserId
+          OR d.owner_team_id = :viewerTeamId
+          OR EXISTS (
+            SELECT 1
+            FROM portal_category_closure scoped_cc
+            WHERE scoped_cc.descendant_id = d.category_id
+              AND scoped_cc.ancestor_id IN (:viewerCategoryIds)
+          )
+        )
       GROUP BY
         d.id, d.title, d.description, d.provider, d.category_id, c.name, pc.name, d.owner_user_id,
         d.owner_team_id, d.owner_name, d.status, d.sensitivity, d.views, d.updated_at,
@@ -186,6 +213,10 @@ async function queryDashboards(
       includeArchived: Boolean(options.includeArchived),
       publishedOnly: Boolean(options.publishedOnly),
       publicOnly: Boolean(options.publicOnly),
+      restrictToViewer: Boolean(options.viewer),
+      viewerUserId: options.viewer?.id ?? "",
+      viewerTeamId: options.viewer?.teamId ?? "",
+      viewerCategoryIds,
     },
   );
 
@@ -194,6 +225,21 @@ async function queryDashboards(
 
 export async function listDashboards(userId: string): Promise<Dashboard[]> {
   return queryDashboards(userId);
+}
+
+export async function listDashboardsForUser(user: PortalUser): Promise<Dashboard[]> {
+  if ((user.status ?? "active") === "suspended") {
+    return [];
+  }
+
+  if ((user.status ?? "active") === "pending") {
+    return queryDashboards(user.id, { publicOnly: true });
+  }
+
+  return queryDashboards(user.id, {
+    includeArchived: user.roles.includes("system_admin"),
+    viewer: user.roles.includes("system_admin") ? undefined : user,
+  });
 }
 
 export async function listPublicDashboards(): Promise<Dashboard[]> {
@@ -610,6 +656,15 @@ export async function archiveDashboard(input: DashboardLifecycleInput): Promise<
     nextStatus: "archived",
     action: "dashboard.archive",
     note: input.note?.trim() || "Dashboard archived.",
+  });
+}
+
+export async function restoreDashboard(input: DashboardLifecycleInput): Promise<Dashboard> {
+  return changeDashboardStatus({
+    ...input,
+    nextStatus: "draft",
+    action: "dashboard.restore",
+    note: input.note?.trim() || "Dashboard restored from archive as draft.",
   });
 }
 

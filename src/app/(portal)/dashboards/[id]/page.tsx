@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, buttonStyles } from "@/components/dashboard-ui";
 import { DashboardViewerEmbed } from "./dashboard-viewer-embed";
-import { FavoriteButton, RecentlyViewedReports } from "./report-actions";
+import { FavoriteButton, RecentlyViewedReports, RestoreReportButton } from "./report-actions";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listAuditEventsForEntity } from "@/lib/db/audit";
 import { getDashboard, recordDashboardView } from "@/lib/db/dashboards";
@@ -10,6 +10,7 @@ import { getEmbedStatusTone } from "@/lib/embed-policy";
 import {
   canUpdateDashboard,
   canViewDashboard,
+  canRestoreDashboard,
   hasPermission,
 } from "@/lib/permissions";
 import type { DashboardStatus, EmbedStatus, SensitivityLevel } from "@/lib/portal-types";
@@ -82,6 +83,7 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
     ? dashboard.categoryPath.join(" / ")
     : dashboard.categoryName;
   const canEdit = canUpdateDashboard(currentUser, dashboard);
+  const canRestore = canRestoreDashboard(currentUser, dashboard);
   const categoryCrumbs = dashboard.categoryPath?.length
     ? dashboard.categoryPath
     : [dashboard.categoryName];
@@ -111,6 +113,7 @@ export default async function DashboardViewerPage({ params }: DashboardViewerPag
           </nav>
           <div className="flex flex-wrap gap-2">
             <FavoriteButton dashboardId={dashboard.id} initialFavorite={dashboard.isFavorite} />
+            {canRestore ? <RestoreReportButton dashboardId={dashboard.id} /> : null}
             {canEdit ? (
               <Link
                 href={`/dashboards/${dashboard.id}/edit`}

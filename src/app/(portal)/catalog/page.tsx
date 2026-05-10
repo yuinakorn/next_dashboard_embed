@@ -10,11 +10,10 @@ import {
 import { CategoryRail } from "./category-rail";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
 import { listCategories } from "@/lib/db/categories";
-import { listDashboards } from "@/lib/db/dashboards";
+import { listDashboardsForUser } from "@/lib/db/dashboards";
 import { getEmbedStatusTone } from "@/lib/embed-policy";
 import {
   canUpdateDashboard,
-  canViewDashboard,
   hasPermission,
 } from "@/lib/permissions";
 import type {
@@ -297,11 +296,11 @@ export default async function CatalogPage({
   const currentUser = await requireCurrentUser();
   const [categoryTree, allDashboards] = await Promise.all([
     listCategories(),
-    listDashboards(currentUser.id),
+    listDashboardsForUser(currentUser),
   ]);
   const categories = flattenCategories(categoryTree);
   const filters = normalizeSearchParams(await searchParams, categories);
-  const visibleDashboards = allDashboards.filter((dashboard) => canViewDashboard(currentUser, dashboard));
+  const visibleDashboards = allDashboards;
   const filteredDashboards = filterDashboards(visibleDashboards, categories, filters);
   const canCreate = hasPermission(currentUser, "dashboard:create");
   const internalCount = visibleDashboards.filter(
