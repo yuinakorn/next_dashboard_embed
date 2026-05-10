@@ -51,6 +51,14 @@ function redirectToLogin(request: Request, reason: string) {
   return response;
 }
 
+async function readResponseSnippet(response: Response): Promise<string> {
+  try {
+    return (await response.text()).slice(0, 1000);
+  } catch {
+    return "<unreadable response body>";
+  }
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const cookieStore = await cookies();
@@ -76,23 +84,61 @@ export async function GET(request: Request) {
     return redirectToLogin(request, "SSO client configuration is incomplete.");
   }
 
-  const tokenResponse = await fetch(new URL("/api/oauth/token", ssoUrl), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: getRedirectUri(request),
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
-  });
+  const tokenEndpoint = new URL("/api/oauth/token", ssoUrl);
+  const redirectUri = getRedirectUri(request);
+  let tokenResponse: Response;
 
-  if (!tokenResponse.ok) {
+  try {
+    tokenResponse = await fetch(tokenEndpoint, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+      body: JSON.stringify({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        client_secret: clientSecret,
+      }),
+    });
+  } catch (error) {
+    console.error("SSO token exchange request failed", {
+      tokenEndpoint: tokenEndpoint.toString(),
+      redirectUri,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return redirectToLogin(request, "SSO token exchange failed.");
   }
 
-  const tokenData = (await tokenResponse.json()) as SsoTokenResponse;
+  if (!tokenResponse.ok) {
+    console.error("SSO token exchange returned non-OK response", {
+      tokenEndpoint: tokenEndpoint.toString(),
+      redirectUri,
+      status: tokenResponse.status,
+      statusText: tokenResponse.statusText,
+      body: await readResponseSnippet(tokenResponse),
+    });
+
+    return redirectToLogin(request, "SSO token exchange failed.");
+  }
+
+  let tokenData: SsoTokenResponse;
+
+  try {
+    tokenData = (await tokenResponse.json()) as SsoTokenResponse;
+  } catch (error) {
+    console.error("SSO token response was not valid JSON", {
+      tokenEndpoint: tokenEndpoint.toString(),
+      redirectUri,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return redirectToLogin(request, "SSO token exchange failed.");
+  }
 
   if (!tokenData.user) {
     return redirectToLogin(request, "SSO token response did not include a user profile.");
