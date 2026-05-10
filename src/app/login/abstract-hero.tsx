@@ -1,101 +1,107 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-type Line = {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  opacity: number;
-  width: number;
-};
+function drawAbstractArt(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-type Pattern = {
-  lines: Line[];
-  gradient: { angle: number; mid: number };
-};
+  const width = (canvas.width = 800);
+  const height = (canvas.height = 1200);
 
-const W = 400;
-const H = 600;
+  // 1. Background fill
+  const bgGradient = ctx.createLinearGradient(0, 0, width, height);
+  bgGradient.addColorStop(0, "#1a1a1a");
+  bgGradient.addColorStop(1, "#000000");
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, width, height);
 
-function generatePattern(): Pattern {
-  const lines: Line[] = [];
-  const count = 16 + Math.floor(Math.random() * 18);
+  // 2. Random shapes
+  const shapeCount = 8 + Math.floor(Math.random() * 5);
+  for (let i = 0; i < shapeCount; i++) {
+    ctx.save();
 
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI;
-    const cx = (Math.random() * 1.6 - 0.3) * W;
-    const cy = (Math.random() * 1.6 - 0.3) * H;
-    const len = Math.max(W, H) * 2;
-    lines.push({
-      x1: cx - Math.cos(angle) * len,
-      y1: cy - Math.sin(angle) * len,
-      x2: cx + Math.cos(angle) * len,
-      y2: cy + Math.sin(angle) * len,
-      opacity: 0.18 + Math.random() * 0.45,
-      width: 0.5 + Math.random() * 1.3,
-    });
+    const x = Math.random() * width;
+    const y = Math.random() * height;
+    const size = 200 + Math.random() * 600;
+
+    const shapeGradient = ctx.createRadialGradient(x, y, 0, x, y, size);
+    const opacity = 0.1 + Math.random() * 0.2;
+    shapeGradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
+    shapeGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+    ctx.fillStyle = shapeGradient;
+
+    if (Math.random() > 0.5) {
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.translate(x, y);
+      ctx.rotate(Math.random() * Math.PI);
+      ctx.beginPath();
+      ctx.moveTo(-size, -size);
+      ctx.lineTo(size, 0);
+      ctx.lineTo(-size, size);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
-  return {
-    lines,
-    gradient: {
-      angle: Math.floor(Math.random() * 360),
-      mid: 25 + Math.floor(Math.random() * 50),
-    },
-  };
+  // 3. Architectural lines
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 10; i++) {
+    ctx.beginPath();
+    const startY = Math.random() * height;
+    ctx.moveTo(0, startY);
+    ctx.lineTo(width, startY + (Math.random() - 0.5) * 400);
+    ctx.stroke();
+  }
+
+  // 4. Noise / grain
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const noise = (Math.random() - 0.5) * 15;
+    data[i] = Math.min(255, Math.max(0, data[i] + noise));
+    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
+    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
+  }
+  ctx.putImageData(imageData, 0, 0);
 }
 
 export function AbstractHero() {
-  const [pattern, setPattern] = useState<Pattern | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [seed, setSeed] = useState(0);
 
   useEffect(() => {
-    setPattern(generatePattern());
+    setSeed(Math.random());
   }, []);
 
-  const gradientStyle = pattern
-    ? {
-        background: `linear-gradient(${pattern.gradient.angle}deg, #d1d5db 0%, #f9fafb ${pattern.gradient.mid}%, #9ca3af 100%)`,
-      }
-    : { background: "linear-gradient(135deg, #d1d5db 0%, #f9fafb 50%, #9ca3af 100%)" };
+  useEffect(() => {
+    if (canvasRef.current) {
+      drawAbstractArt(canvasRef.current);
+    }
+  }, [seed]);
 
   return (
-    <div
-      className="relative h-full min-h-[420px] overflow-hidden lg:min-h-[600px]"
-      style={gradientStyle}
-    >
-      {pattern ? (
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="xMidYMid slice"
-          className="absolute inset-0 h-full w-full"
-          aria-hidden="true"
-        >
-          {pattern.lines.map((l, i) => (
-            <line
-              key={i}
-              x1={l.x1}
-              y1={l.y1}
-              x2={l.x2}
-              y2={l.y2}
-              stroke="black"
-              strokeOpacity={l.opacity}
-              strokeWidth={l.width}
-            />
-          ))}
-        </svg>
-      ) : null}
+    <div className="relative h-full min-h-[420px] overflow-hidden bg-zinc-900 lg:min-h-[600px]">
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 h-full w-full object-cover"
+        aria-hidden="true"
+      />
 
-      <div className="relative z-10 flex h-full flex-col justify-center p-8 sm:p-10">
-        <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-6 shadow-2xl backdrop-blur-md sm:p-8">
-          <p className="mb-2 text-xs uppercase tracking-[0.18em] text-white/70">
+      <div className="absolute inset-0 z-10 flex flex-col justify-center bg-gradient-to-t from-black/60 to-transparent p-8 text-white sm:p-12">
+        <div className="space-y-6">
+          <div className="inline-block border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold tracking-[0.2em] backdrop-blur-md">
             ศูนย์ข้อมูลสุขภาพ - OPEN DATA
-          </p>
-          <h1 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
-            Dashboard Hub
-          </h1>
-          <p className="text-sm leading-relaxed text-white/85">
+          </div>
+          <h1 className="text-4xl font-bold leading-tight">Dashboard Hub</h1>
+          <div className="h-1 w-12 bg-blue-500" />
+          <p className="max-w-xs text-sm leading-relaxed text-slate-300">
             เข้าถึง dashboard ภายในของหน่วยงาน ตรวจสอบรายงาน
             และจัดการข้อมูลตามสิทธิ์ที่ได้รับ
           </p>

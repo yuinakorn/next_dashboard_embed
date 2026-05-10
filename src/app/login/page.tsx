@@ -49,10 +49,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     process.env.SSO_URL && process.env.SSO_CLIENT_ID && process.env.SSO_CLIENT_SECRET,
   );
 
+  const currentYear = new Date().getFullYear();
+
   return (
-    <main className="min-h-screen bg-[oklch(0.985_0.003_250)] text-[oklch(0.21_0.015_255)]">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-5 py-10">
-        <section className="grid w-full overflow-hidden rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] shadow-sm lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+    <main className="flex min-h-screen flex-col bg-[oklch(0.985_0.003_250)] text-[oklch(0.21_0.015_255)]">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 items-center px-5 py-10">
+        <section className="grid w-full overflow-hidden rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] shadow-sm lg:grid-cols-[minmax(0,1.222fr)_minmax(0,1fr)]">
           {/* Left panel: product context */}
           <AbstractHero />
 
@@ -122,9 +124,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               <p className="mt-5 text-xs leading-5 text-[oklch(0.5_0.012_255)]">
                 การเข้าสู่ระบบเป็นไปตามนโยบายความปลอดภัยของหน่วยงาน
               </p>
-              <p className="mt-2 text-xs leading-5 text-[oklch(0.66_0.01_255)]">
-                Version {appVersion}
-              </p>
 
               <div className="mt-8 border-t border-[oklch(0.91_0.006_250)] pt-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.66_0.01_255)]">
@@ -170,6 +169,24 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
         </section>
       </div>
+
+      <footer className="border-t border-[oklch(0.91_0.006_250)]/70 bg-[oklch(0.985_0.003_250)]/80 backdrop-blur-sm">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-2 px-5 py-5 text-xs text-[oklch(0.5_0.012_255)] sm:flex-row">
+          <p className="flex items-center gap-2">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[oklch(0.55_0.18_150)]" aria-hidden="true" />
+            <span>
+              © {currentYear} สำนักงานสาธารณสุขจังหวัดเชียงใหม่
+            </span>
+            <span className="hidden text-[oklch(0.78_0.008_255)] sm:inline">·</span>
+            <span className="hidden sm:inline">All rights reserved.</span>
+          </p>
+          <p className="flex items-center gap-3 font-mono tracking-tight text-[oklch(0.55_0.012_255)]">
+            <span className="rounded-full border border-[oklch(0.91_0.006_250)] bg-white px-2.5 py-0.5">
+              v{appVersion}
+            </span>
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }
