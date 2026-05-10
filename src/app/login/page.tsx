@@ -1,6 +1,7 @@
 import { buttonStyles } from "@/components/dashboard-ui";
 import Link from "next/link";
 import packageJson from "../../../package.json";
+import { AbstractHero } from "./abstract-hero";
 
 type LoginPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -53,47 +54,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-5 py-10">
         <section className="grid w-full overflow-hidden rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] shadow-sm lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           {/* Left panel: product context */}
-          <div className="border-b border-[oklch(0.91_0.006_250)] bg-[oklch(0.94_0.009_240)] p-6 sm:p-8 lg:border-b-0 lg:border-r">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.5_0.012_255)]">
-              ศูนย์ข้อมูลสุขภาพ - Open Data
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[oklch(0.21_0.015_255)]">
-              Dashboard Hub
-            </h1>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-[oklch(0.5_0.012_255)]">
-              เข้าถึง dashboard ภายในของหน่วยงาน ตรวจสอบรายงาน
-              และจัดการข้อมูลตามสิทธิ์ที่ได้รับ
-            </p>
-
-            <dl className="mt-8 space-y-5 text-sm">
-              <div>
-                <dt className="font-semibold text-[oklch(0.21_0.015_255)]">
-                  Dashboard ภายใน
-                </dt>
-                <dd className="mt-1 leading-6 text-[oklch(0.5_0.012_255)]">
-                  เปิดดู dashboard ที่จำกัดเฉพาะบุคลากรในหน่วยงาน
-                  รวมถึงข้อมูลที่ต้องใช้สิทธิ์ระดับต่างๆ
-                </dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-[oklch(0.21_0.015_255)]">
-                  การตรวจสอบและอนุมัติ
-                </dt>
-                <dd className="mt-1 leading-6 text-[oklch(0.5_0.012_255)]">
-                  ดำเนินการ review, อนุมัติการเผยแพร่
-                  และตรวจสอบประวัติการใช้งานของ dashboard
-                </dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-[oklch(0.21_0.015_255)]">
-                  ข้อมูลสาธารณะ
-                </dt>
-                <dd className="mt-1 leading-6 text-[oklch(0.5_0.012_255)]">
-                  Dashboard ที่เป็นข้อมูลเปิดเผยสามารถเปิดดูได้โดยไม่ต้องเข้าสู่ระบบ
-                </dd>
-              </div>
-            </dl>
-          </div>
+          <AbstractHero />
 
           {/* Right panel: login action */}
           <div className="p-6 sm:p-8">
