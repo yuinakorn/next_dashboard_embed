@@ -52,57 +52,44 @@ function isActionableForUser(user: PortalUser, dashboard: Dashboard) {
   return dashboard.ownerUserId === user.id;
 }
 
-function MetricCard({
+function KpiCell({
   label,
   value,
-  detail,
-  href,
   accent,
+  detail,
 }: {
   label: string;
-  value: string;
-  detail: string;
-  href: string;
+  value: number;
   accent: string;
+  detail?: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="group rounded-xl px-4 py-4 transition-shadow duration-150 hover:shadow-[0_2px_12px_-4px_oklch(0.3_0.02_255/0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-      style={{
-        background: palette.paper,
-        border: `1px solid ${palette.border}`,
-        outlineColor: palette.accent,
-      }}
-    >
+    <div className="px-5 py-4" style={{ background: palette.paper }}>
       <div className="flex items-center gap-1.5">
         <span
           className="inline-block h-1.5 w-1.5 rounded-full"
           style={{ background: accent }}
           aria-hidden="true"
         />
-        <span
-          className="text-[13px] font-semibold tracking-wide"
+        <p
+          className="text-[11px] font-semibold uppercase tracking-wider"
           style={{ color: palette.inkMuted }}
         >
           {label}
-        </span>
+        </p>
       </div>
-      <div className="mt-1 flex items-end justify-between gap-3">
-        <strong
-          className="text-[26px] font-semibold leading-tight tracking-tight tabular-nums"
-          style={{ color: palette.ink }}
-        >
-          {value}
-        </strong>
-        <span
-          className="max-w-36 text-right text-[13px] leading-5"
-          style={{ color: palette.inkFaint }}
-        >
+      <strong
+        className="mt-1 block text-[26px] font-semibold leading-tight tracking-tight tabular-nums"
+        style={{ color: palette.ink }}
+      >
+        {value.toLocaleString("th-TH")}
+      </strong>
+      {detail ? (
+        <p className="mt-1 text-xs" style={{ color: palette.inkFaint }}>
           {detail}
-        </span>
-      </div>
-    </Link>
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -431,35 +418,61 @@ export default async function Home() {
             </aside>
           </div>
 
-          <section className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <MetricCard
-              label="รายงานที่เปิดได้"
-              value={publishedReports.length.toLocaleString("th-TH")}
-              detail="ตามสิทธิ์ปัจจุบัน"
-              href="/catalog"
-              accent={palette.accent}
-            />
-            <MetricCard
-              label="รายงานสาธารณะ"
-              value={publicReports.length.toLocaleString("th-TH")}
-              detail="ประชาชนเห็นได้"
-              href="/public"
-              accent={palette.emerald}
-            />
-            <MetricCard
-              label="ต้องเข้าสู่ระบบ"
-              value={loginRequiredReports.length.toLocaleString("th-TH")}
-              detail="รายงานภายใน"
-              href="/catalog"
-              accent={palette.indigo}
-            />
-            <MetricCard
-              label={canAudit ? "หมวดรายงาน" : "ทีมของฉัน"}
-              value={(canAudit ? categories.length : myTeamReports.length).toLocaleString("th-TH")}
-              detail={canAudit ? "ทุกระดับชั้น" : "รายงานที่เกี่ยวข้อง"}
-              href={canAudit ? "/admin/categories" : "/catalog"}
-              accent={palette.amber}
-            />
+          <section
+            className="mt-6 grid gap-px overflow-hidden rounded-xl border"
+            style={{ background: palette.border, borderColor: palette.border }}
+          >
+            <div className="grid gap-px md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+              <div
+                className="relative px-5 py-4"
+                style={{ background: palette.accentSoft }}
+              >
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-wider"
+                  style={{ color: palette.accentDeep }}
+                >
+                  รายงานที่เปิดได้
+                </p>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <strong
+                    className="text-[34px] font-semibold leading-none tracking-tight"
+                    style={{ color: palette.accentDeep }}
+                  >
+                    {publishedReports.length.toLocaleString("th-TH")}
+                  </strong>
+                  <span
+                    className="text-sm"
+                    style={{ color: palette.accentDeep, opacity: 0.7 }}
+                  >
+                    / {publishedReports.length.toLocaleString("th-TH")} รายการที่เปิดได้
+                  </span>
+                </div>
+                <p
+                  className="mt-2 text-xs"
+                  style={{ color: palette.accentDeep, opacity: 0.65 }}
+                >
+                  ทุกรายงานที่บัญชีนี้เข้าถึงได้
+                </p>
+              </div>
+              <KpiCell
+                label="รายงานสาธารณะ"
+                value={publicReports.length}
+                accent={palette.emerald}
+                detail="ประชาชนเห็นได้"
+              />
+              <KpiCell
+                label="ต้องเข้าสู่ระบบ"
+                value={loginRequiredReports.length}
+                accent={palette.indigo}
+                detail="รายงานภายใน"
+              />
+              <KpiCell
+                label={canAudit ? "หมวดรายงาน" : "ทีมของฉัน"}
+                value={canAudit ? categories.length : myTeamReports.length}
+                accent={palette.amber}
+                detail={canAudit ? "ทุกระดับชั้น" : "รายงานที่เกี่ยวข้อง"}
+              />
+            </div>
           </section>
         </div>
       </header>

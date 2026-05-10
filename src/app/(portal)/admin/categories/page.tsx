@@ -30,15 +30,10 @@ export default async function AdminCategoriesPage() {
         eyebrow="ดูแลระบบ"
         title="จัดการหมวดรายงาน"
         description="ดูแลโครงสร้างหมวดรายงานแบบหลายชั้น เจ้าของหมวด ลำดับแสดงผล และสถานะการใช้งาน"
-        maxWidth="max-w-[92rem]"
-        actions={[
-          { href: "/admin/users", label: "ผู้ใช้งาน" },
-          { href: "/audit", label: "ประวัติ Audit" },
-          { href: "/", label: "หน้าหลัก", primary: true },
-        ]}
+        maxWidth="max-w-7xl"
       />
 
-      <div className="mx-auto max-w-[92rem] px-5 py-6">
+      <div className="mx-auto max-w-7xl px-5 py-6">
         <CategoryManager
           initialCategories={categories}
           teams={teams}

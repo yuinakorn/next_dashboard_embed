@@ -194,6 +194,59 @@ Inactive response:
 
 หมายเหตุ: ถ้า Client App ใช้ token เฉพาะตอน callback เพื่อสร้าง session ของตัวเอง อาจไม่จำเป็นต้องเรียก introspection ทุก request
 
+## 5. Logout (Single Logout)
+
+ถ้า Client App ลบ session ของตัวเองอย่างเดียว แต่ไม่บอก SSO Portal ให้ล้าง session ด้วย ผู้ใช้จะ "ทะลุ" เข้าระบบได้ทันทีเมื่อกด login ใหม่ เพราะ SSO Portal ยังจำ session เดิมอยู่
+
+ทางแก้คือเมื่อ user กด logout ที่ Client App ให้:
+
+1. ลบ session/cookie ของ Client App เอง
+2. Redirect browser ไปที่ endpoint front-channel logout ของ SSO Portal
+
+```text
+GET {SSO_URL}/api/auth/logout?client_id={CLIENT_ID}&post_logout_redirect_uri={URL_ENCODED_RETURN_URL}
+```
+
+ตัวอย่าง:
+
+```text
+https://sso.example.go.th/api/auth/logout?client_id=my-app&post_logout_redirect_uri=https%3A%2F%2Fmy-app.example.go.th%2Flogged-out
+```
+
+SSO Portal จะ:
+
+- ตรวจว่า `client_id` มีอยู่และ active
+- ตรวจว่า origin ของ `post_logout_redirect_uri` ตรงกับ origin ของ `redirect_uri` ที่ลงทะเบียนไว้ (กัน open redirect)
+- Revoke session ใน DB และลบ session cookie ของ SSO Portal
+- เขียน audit log event `logout`
+- Redirect browser กลับไปที่ `post_logout_redirect_uri`
+
+ข้อกำหนด:
+
+- `post_logout_redirect_uri` ต้องมี **origin (scheme + host + port)** ตรงกับ `redirect_uri` ที่ลงทะเบียนไว้ใน `/admin/apps` ไม่จำเป็นต้องเป็น path เดียวกัน
+- ต้อง URL-encode ค่า `post_logout_redirect_uri` ก่อนต่อใน query string
+
+ตัวอย่าง Express handler:
+
+```js
+app.post("/auth/sso/logout", (req, res) => {
+  req.session.destroy(() => {
+    const url = new URL("/api/auth/logout", process.env.SSO_URL);
+    url.searchParams.set("client_id", process.env.SSO_CLIENT_ID);
+    url.searchParams.set(
+      "post_logout_redirect_uri",
+      `${process.env.APP_URL}/logged-out`,
+    );
+    res.redirect(url.toString());
+  });
+});
+```
+
+หมายเหตุ:
+
+- ถ้า user มาจาก Client App หลายตัว การเรียก logout endpoint นี้จะล้าง session กลางที่ SSO Portal ทำให้ Client App ตัวอื่นๆ ที่ใช้ session เดียวกันต้อง login ใหม่ในรอบถัดไป (single logout เชิง session กลาง)
+- access token ที่ออกไปแล้วจะยังใช้งานได้จนกว่าจะหมดอายุตาม `expires_in` ถ้าต้องการ revoke ทันทีให้ตรวจด้วย introspection
+
 ## ตัวอย่าง Node.js Backend
 
 ตัวอย่าง callback endpoint แบบ Express:
