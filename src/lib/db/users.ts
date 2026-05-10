@@ -282,12 +282,14 @@ export async function updateManagedUserPermissions({
   roles,
   categoryIds,
   categories,
+  activateUser = false,
 }: {
   actor: PortalUser;
   userId: string;
   roles: PortalRole[];
   categoryIds: string[];
   categories: Category[];
+  activateUser?: boolean;
 }) {
   const existingUser = await getManagedUser(userId);
 
@@ -323,6 +325,24 @@ export async function updateManagedUserPermissions({
           VALUES (:userId, :teamId, :categoryId)
         `,
         { userId, teamId: existingUser.teamId, categoryId },
+      );
+    }
+
+    if (activateUser && existingUser.status !== "active") {
+      await connection.query(
+        `
+          UPDATE portal_users
+          SET
+            status = 'active',
+            approved_by = :actorUserId,
+            approved_at = CURRENT_TIMESTAMP,
+            disabled_reason = NULL
+          WHERE id = :userId
+        `,
+        {
+          actorUserId: actor.id,
+          userId,
+        },
       );
     }
 
@@ -363,8 +383,13 @@ export async function updateManagedUserPermissions({
         beforeJson: JSON.stringify({
           roles: existingUser.roles,
           categoryIds: existingUser.scopes.flatMap((scope) => scope.categoryIds),
+          status: existingUser.status ?? "active",
         }),
-        afterJson: JSON.stringify({ roles: nextRoles, categoryIds: nextCategoryIds }),
+        afterJson: JSON.stringify({
+          roles: nextRoles,
+          categoryIds: nextCategoryIds,
+          status: activateUser ? "active" : existingUser.status ?? "active",
+        }),
       },
     );
 

@@ -24,6 +24,11 @@ type ManagedCategoryRow = CategoryRow & {
   updated_at: Date;
 };
 
+type CategoryDeleteDependencyRow = RowDataPacket & {
+  child_count: number;
+  dashboard_count: number;
+};
+
 export type ManagedCategory = {
   id: string;
   name: string;
@@ -35,6 +40,13 @@ export type ManagedCategory = {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type CategoryDeleteReadiness = {
+  canDelete: boolean;
+  childCount: number;
+  dashboardCount: number;
+  reason: string | null;
 };
 
 export type PortalCategory = Omit<Category, "children"> & {
@@ -367,6 +379,126 @@ export async function updateManagedCategory({
         note: `Updated category ${name}.`,
         beforeJson: JSON.stringify(existing),
         afterJson: JSON.stringify({ id, name, ownerTeamId, status, sortOrder }),
+      },
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function getCategoryDeleteReadiness(id: string): Promise<CategoryDeleteReadiness> {
+  const [rows] = await getDbPool().query<CategoryDeleteDependencyRow[]>(
+    `
+      SELECT
+        (
+          SELECT COUNT(*)
+          FROM portal_categories child
+          WHERE child.parent_id = :id
+        ) AS child_count,
+        (
+          SELECT COUNT(*)
+          FROM portal_dashboards dashboard
+          WHERE dashboard.category_id = :id
+        ) AS dashboard_count
+    `,
+    { id },
+  );
+  const dependency = rows[0] ?? { child_count: 0, dashboard_count: 0 };
+  const childCount = Number(dependency.child_count);
+  const dashboardCount = Number(dependency.dashboard_count);
+
+  if (childCount > 0) {
+    return {
+      canDelete: false,
+      childCount,
+      dashboardCount,
+      reason: `ยังมีหมวดย่อย ${childCount.toLocaleString("th-TH")} หมวด ต้องลบหรือย้ายหมวดย่อยก่อน`,
+    };
+  }
+
+  if (dashboardCount > 0) {
+    return {
+      canDelete: false,
+      childCount,
+      dashboardCount,
+      reason: `ยังมีรายงาน ${dashboardCount.toLocaleString("th-TH")} รายการ ต้องย้ายรายงานก่อน`,
+    };
+  }
+
+  return {
+    canDelete: true,
+    childCount,
+    dashboardCount,
+    reason: null,
+  };
+}
+
+export async function deleteManagedCategory({
+  actor,
+  id,
+}: {
+  actor: PortalUser;
+  id: string;
+}) {
+  const existing = (await listManagedCategories()).find((category) => category.id === id);
+
+  if (!existing) {
+    throw new Error("Category was not found.");
+  }
+
+  const readiness = await getCategoryDeleteReadiness(id);
+
+  if (!readiness.canDelete) {
+    throw new Error(readiness.reason ?? "Category cannot be deleted.");
+  }
+
+  const connection = await getDbPool().getConnection();
+
+  try {
+    await connection.beginTransaction();
+    await connection.query(
+      "DELETE FROM portal_category_closure WHERE ancestor_id = :id OR descendant_id = :id",
+      { id },
+    );
+    await connection.query("DELETE FROM portal_category_scopes WHERE category_id = :id", { id });
+    await connection.query("DELETE FROM portal_categories WHERE id = :id", { id });
+    await connection.query(
+      `
+        INSERT INTO portal_audit_logs (
+          id,
+          actor_user_id,
+          actor_name,
+          action,
+          entity_type,
+          entity_id,
+          entity_title,
+          note,
+          before_json
+        )
+        VALUES (
+          :auditId,
+          :actorUserId,
+          :actorName,
+          'category.delete',
+          'category',
+          :entityId,
+          :entityTitle,
+          :note,
+          :beforeJson
+        )
+      `,
+      {
+        auditId: `audit-${randomUUID()}`,
+        actorUserId: actor.id,
+        actorName: actor.name,
+        entityId: id,
+        entityTitle: existing.name,
+        note: `Deleted empty category ${existing.name}.`,
+        beforeJson: JSON.stringify(existing),
       },
     );
     await connection.commit();

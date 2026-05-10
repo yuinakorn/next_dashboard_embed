@@ -8,6 +8,7 @@ import type { PortalRole } from "@/lib/portal-types";
 type UpdatePermissionsBody = {
   roles?: unknown;
   categoryIds?: unknown;
+  activate?: unknown;
 };
 
 const validRoles: PortalRole[] = [
@@ -50,6 +51,7 @@ export async function PATCH(
     validRoles.includes(role as PortalRole),
   );
   const categoryIds = parseStringArray(body.categoryIds);
+  const activateUser = body.activate === true;
 
   await updateManagedUserPermissions({
     actor,
@@ -57,6 +59,7 @@ export async function PATCH(
     roles,
     categoryIds,
     categories: await listCategories(),
+    activateUser,
   });
 
   return NextResponse.json({ ok: true });

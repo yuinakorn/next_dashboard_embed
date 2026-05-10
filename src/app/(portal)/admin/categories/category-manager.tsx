@@ -102,6 +102,8 @@ export function CategoryManager({
   );
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const teamNames = useMemo(
     () => new Map(teams.map((team) => [team.id, team.name])),
     [teams],
@@ -177,14 +179,152 @@ export function CategoryManager({
     });
   }
 
+  function reorderSiblings(targetNode: CategoryNode) {
+    if (!draggedId || draggedId === targetNode.id) {
+      return;
+    }
+
+    const dragged = categories.find((category) => category.id === draggedId);
+
+    if (!dragged) {
+      return;
+    }
+
+    if (dragged.parentId !== targetNode.parentId) {
+      setMessage("ย้ายลำดับได้เฉพาะภายในหมวดแม่เดียวกัน");
+      return;
+    }
+
+    const siblings = categories
+      .filter((category) => category.parentId === dragged.parentId)
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th-TH"),
+      );
+    const fromIdx = siblings.findIndex((category) => category.id === dragged.id);
+    const toIdx = siblings.findIndex((category) => category.id === targetNode.id);
+
+    if (fromIdx === -1 || toIdx === -1) {
+      return;
+    }
+
+    const reordered = [...siblings];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    const updated = reordered.map((category, index) => ({
+      ...category,
+      sortOrder: index,
+    }));
+    const changed = updated.filter((category) => {
+      const original = siblings.find((sibling) => sibling.id === category.id);
+      return original && original.sortOrder !== category.sortOrder;
+    });
+
+    if (changed.length === 0) {
+      return;
+    }
+
+    setCategories((current) =>
+      current.map((category) => {
+        const next = updated.find((entry) => entry.id === category.id);
+        return next ? { ...category, sortOrder: next.sortOrder } : category;
+      }),
+    );
+    setMessage(null);
+    startTransition(async () => {
+      try {
+        const responses = await Promise.all(
+          changed.map((category) =>
+            fetch(`/api/admin/categories/${category.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: category.name,
+                ownerTeamId: category.ownerTeamId,
+                status: category.status,
+                sortOrder: category.sortOrder,
+              }),
+            }),
+          ),
+        );
+        const lastOk = [...responses].reverse().find((response) => response.ok);
+
+        if (!lastOk) {
+          setMessage("ไม่สามารถย้ายลำดับหมวดได้");
+          return;
+        }
+
+        const body = (await lastOk.json().catch(() => null)) as {
+          categories?: ManagedCategory[];
+        } | null;
+
+        if (body?.categories) {
+          setCategories(body.categories);
+        }
+
+        setMessage("ย้ายลำดับหมวดเรียบร้อย");
+      } catch {
+        setMessage("ไม่สามารถย้ายลำดับหมวดได้");
+      }
+    });
+  }
+
   function renderNode(node: CategoryNode) {
     const selected = node.id === selectedCategory?.id;
     const hasChildren = node.children.length > 0;
+    const draggedNode = draggedId
+      ? categories.find((category) => category.id === draggedId) ?? null
+      : null;
+    const isDropTarget =
+      dragOverId === node.id &&
+      draggedNode !== null &&
+      draggedNode.id !== node.id &&
+      draggedNode.parentId === node.parentId;
+    const isDragging = draggedId === node.id;
     const row = (
       <button
         type="button"
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", node.id);
+          setDraggedId(node.id);
+        }}
+        onDragEnd={() => {
+          setDraggedId(null);
+          setDragOverId(null);
+        }}
+        onDragOver={(event) => {
+          if (
+            !draggedId ||
+            draggedId === node.id ||
+            !draggedNode ||
+            draggedNode.parentId !== node.parentId
+          ) {
+            return;
+          }
+
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+
+          if (dragOverId !== node.id) {
+            setDragOverId(node.id);
+          }
+        }}
+        onDragLeave={() => {
+          setDragOverId((current) => (current === node.id ? null : current));
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          reorderSiblings(node);
+          setDraggedId(null);
+          setDragOverId(null);
+        }}
         className={`w-full rounded-md px-3 py-2 text-left transition ${
           selected ? "bg-slate-950 text-white" : "hover:bg-slate-100"
+        } ${isDropTarget ? "ring-2 ring-sky-500 ring-offset-1" : ""} ${
+          isDragging ? "opacity-50" : ""
         }`}
         onClick={() => selectCategory(node)}
       >
@@ -229,7 +369,7 @@ export function CategoryManager({
         <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">โครงสร้างหมวดรายงาน</h2>
-            <p className="mt-1 text-sm text-slate-500">คลี่หมวดเพื่อเลือก แก้ไข หรือสร้างหมวดย่อย</p>
+            <p className="mt-1 text-sm text-slate-500">คลี่หมวดเพื่อเลือก แก้ไข หรือสร้างหมวดย่อย · ลากหมวดเพื่อย้ายลำดับภายในหมวดแม่เดียวกัน</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-md bg-slate-100 px-3 py-2">

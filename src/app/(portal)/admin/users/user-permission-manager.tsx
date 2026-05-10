@@ -31,17 +31,30 @@ const roleTone: Record<PortalRole, string> = {
 };
 
 const userStatusLabels = {
-  pending: "รออนุมัติ",
+  pending: "รอเปิดใช้งาน",
   active: "ใช้งานได้",
   suspended: "ระงับ",
 };
 
 const requestStatusLabels: Record<AccessRequestStatus, string> = {
-  pending: "รอดำเนินการ",
+  pending: "รอตรวจคำขอ",
   approved: "อนุมัติแล้ว",
   rejected: "ปฏิเสธ",
   cancelled: "ยกเลิก",
 };
+
+type ApprovalQueueItem =
+  | {
+      id: string;
+      kind: "access_request";
+      request: AccessRequest;
+      user: ManagedPortalUser | undefined;
+    }
+  | {
+      id: string;
+      kind: "new_user";
+      user: ManagedPortalUser;
+    };
 
 function scopedCategoryIds(user: ManagedPortalUser) {
   return user.scopes.flatMap((scope) => scope.categoryIds);
@@ -54,21 +67,84 @@ export function UserPermissionManager({
   categories,
   accessRequests,
 }: UserPermissionManagerProps) {
-  const [selectedUserId, setSelectedUserId] = useState(users[0]?.id ?? "");
-  const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
-  const [roleDraft, setRoleDraft] = useState<PortalRole[]>(selectedUser?.roles ?? ["viewer"]);
-  const [scopeDraft, setScopeDraft] = useState<string[]>(selectedUser ? scopedCategoryIds(selectedUser) : []);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const selectedUser = selectedUserId
+    ? users.find((user) => user.id === selectedUserId) ?? null
+    : null;
+  const [roleDraft, setRoleDraft] = useState<PortalRole[]>(["viewer"]);
+  const [scopeDraft, setScopeDraft] = useState<string[]>([]);
+  const [categoryQuery, setCategoryQuery] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const teamNames = useMemo(
     () => new Map(teams.map((team) => [team.id, team.name])),
     [teams],
   );
+  const allCategoryIds = useMemo(() => categories.map((category) => category.id), [categories]);
+  const rootCategoryIds = useMemo(
+    () => categories.filter((category) => category.depth === 0).map((category) => category.id),
+    [categories],
+  );
+  const teamCategoryIds = useMemo(
+    () =>
+      selectedUser
+        ? categories
+            .filter((category) => category.ownerTeamId === selectedUser.teamId)
+            .map((category) => category.id)
+        : [],
+    [categories, selectedUser],
+  );
+  const filteredCategories = useMemo(() => {
+    const normalizedQuery = categoryQuery.trim().toLocaleLowerCase("th-TH");
+
+    if (!normalizedQuery) {
+      return categories;
+    }
+
+    return categories.filter((category) =>
+      category.name.toLocaleLowerCase("th-TH").includes(normalizedQuery),
+    );
+  }, [categories, categoryQuery]);
+  const approvalQueue = useMemo<ApprovalQueueItem[]>(() => {
+    const pendingRequests = accessRequests.filter((request) => request.status === "pending");
+    const usersById = new Map(users.map((user) => [user.id, user]));
+    const requestUserIds = new Set(pendingRequests.map((request) => request.userId));
+    const requestItems: ApprovalQueueItem[] = pendingRequests.map((request) => ({
+      id: request.id,
+      kind: "access_request",
+      request,
+      user: usersById.get(request.userId),
+    }));
+    const newUserItems: ApprovalQueueItem[] = users
+      .filter((user) => (user.status ?? "active") === "pending" && !requestUserIds.has(user.id))
+      .map((user) => ({
+        id: `new-user-${user.id}`,
+        kind: "new_user",
+        user,
+      }));
+
+    return [...requestItems, ...newUserItems];
+  }, [accessRequests, users]);
+  const queuedUserIds = useMemo(
+    () =>
+      new Set(
+        approvalQueue.map((item) =>
+          item.kind === "access_request" ? item.request.userId : item.user.id,
+        ),
+      ),
+    [approvalQueue],
+  );
 
   function selectUser(user: ManagedPortalUser) {
     setSelectedUserId(user.id);
     setRoleDraft(user.roles);
     setScopeDraft(scopedCategoryIds(user));
+    setCategoryQuery("");
+    setMessage(null);
+  }
+
+  function closePermissionEditor() {
+    setSelectedUserId(null);
     setMessage(null);
   }
 
@@ -82,12 +158,60 @@ export function UserPermissionManager({
     });
   }
 
-  function toggleScope(categoryId: string) {
-    setScopeDraft((current) =>
-      current.includes(categoryId)
-        ? current.filter((item) => item !== categoryId)
-        : [...current, categoryId],
+  function categoryBranchIds(category: CategoryOption) {
+    const startIndex = categories.findIndex((item) => item.id === category.id);
+
+    if (startIndex < 0) {
+      return [category.id];
+    }
+
+    const branch: string[] = [];
+
+    for (let index = startIndex; index < categories.length; index += 1) {
+      const candidate = categories[index];
+
+      if (index !== startIndex && candidate.depth <= category.depth) {
+        break;
+      }
+
+      branch.push(candidate.id);
+    }
+
+    return branch;
+  }
+
+  function replaceScope(nextCategoryIds: string[]) {
+    const allowedCategoryIds = new Set(allCategoryIds);
+    const next = Array.from(new Set(nextCategoryIds)).filter((categoryId) =>
+      allowedCategoryIds.has(categoryId),
     );
+
+    setScopeDraft(next);
+  }
+
+  function setScopePreset(categoryIds: string[]) {
+    replaceScope(categoryIds);
+  }
+
+  function toggleScopeBranch(category: CategoryOption) {
+    const branchIds = categoryBranchIds(category);
+
+    setScopeDraft((current) =>
+      branchIds.every((categoryId) => current.includes(categoryId))
+        ? current.filter((categoryId) => !branchIds.includes(categoryId))
+        : Array.from(new Set([...current, ...branchIds])),
+    );
+  }
+
+  function getBranchState(category: CategoryOption) {
+    const branchIds = categoryBranchIds(category);
+    const selectedCount = branchIds.filter((categoryId) => scopeDraft.includes(categoryId)).length;
+
+    return {
+      isSelected: selectedCount === branchIds.length,
+      isPartial: selectedCount > 0 && selectedCount < branchIds.length,
+      total: branchIds.length,
+    };
   }
 
   function savePermissions() {
@@ -100,7 +224,11 @@ export function UserPermissionManager({
       const response = await fetch(`/api/admin/users/${selectedUser.id}/permissions`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roles: roleDraft, categoryIds: scopeDraft }),
+        body: JSON.stringify({
+          roles: roleDraft,
+          categoryIds: scopeDraft,
+          activate: (selectedUser.status ?? "active") === "pending",
+        }),
       });
 
       if (!response.ok) {
@@ -109,7 +237,52 @@ export function UserPermissionManager({
         return;
       }
 
-      setMessage("บันทึกสิทธิ์แล้ว รีเฟรชหน้าเพื่อดูข้อมูลล่าสุด");
+      window.location.reload();
+    });
+  }
+
+  function activateAsViewer(user: ManagedPortalUser) {
+    setMessage(null);
+    startTransition(async () => {
+      const response = await fetch(`/api/admin/users/${user.id}/permissions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roles: ["viewer"], categoryIds: [], activate: true }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setMessage(body?.error ?? "ไม่สามารถเปิดใช้งานผู้ใช้ได้");
+        return;
+      }
+
+      window.location.reload();
+    });
+  }
+
+  function suspendUser(user: ManagedPortalUser) {
+    const disabledReason = window.prompt("ระบุเหตุผลที่ระงับผู้ใช้", "ไม่อนุมัติการใช้งาน Portal") ?? "";
+
+    if (disabledReason.trim().length < 5) {
+      setMessage("กรุณาระบุเหตุผลอย่างน้อย 5 ตัวอักษร");
+      return;
+    }
+
+    setMessage(null);
+    startTransition(async () => {
+      const response = await fetch(`/api/admin/users/${user.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "suspended", disabledReason }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setMessage(body?.error ?? "ไม่สามารถระงับผู้ใช้ได้");
+        return;
+      }
+
+      window.location.reload();
     });
   }
 
@@ -180,79 +353,161 @@ export function UserPermissionManager({
   return (
     <div className="space-y-6">
       <TableShell
-        title="คำขอสิทธิ์"
-        description="อนุมัติหรือปฏิเสธคำขอใช้งานจากผู้ใช้ใหม่และผู้ใช้ที่ต้องการขอบเขตเพิ่ม"
+        title="คิวอนุมัติ"
+        description="งานที่ต้องตัดสินใจตอนนี้: ผู้ใช้ใหม่จาก SSO และคำขอ role/scope ที่รอตรวจ"
       >
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-100 text-left text-xs uppercase tracking-[0.08em] text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-semibold">ผู้ขอ</th>
-              <th className="px-4 py-3 font-semibold">Role ที่ขอ</th>
+              <th className="px-4 py-3 font-semibold">ประเภท</th>
+              <th className="px-4 py-3 font-semibold">ผู้ใช้</th>
+              <th className="px-4 py-3 font-semibold">Role</th>
               <th className="px-4 py-3 font-semibold">Scope</th>
-              <th className="px-4 py-3 font-semibold">เหตุผล</th>
               <th className="px-4 py-3 font-semibold">สถานะ</th>
               <th className="px-4 py-3 font-semibold">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {accessRequests.length ? (
-              accessRequests.slice(0, 20).map((request) => (
-                <tr key={request.id} className={request.status === "pending" ? "bg-amber-50/40" : "bg-slate-50"}>
-                  <td className="px-4 py-4 align-top">
-                    <p className="font-semibold text-slate-950">{request.userName}</p>
-                    <p className="mt-1 text-xs text-slate-500">{request.userDepartment}</p>
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    <div className="flex flex-wrap gap-1">
-                      {request.requestedRoles.map((role) => (
-                        <Badge key={role} className={roleTone[role]}>
-                          {roleLabels[role]}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 align-top text-slate-600">
-                    {request.requestedCategoryIds.length} หมวด
-                  </td>
-                  <td className="max-w-xs px-4 py-4 align-top text-slate-600">
-                    <p className="line-clamp-3">{request.reason}</p>
-                    {request.reviewNote ? (
-                      <p className="mt-2 text-xs text-slate-400">{request.reviewNote}</p>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-4 align-top text-slate-600">
-                    {requestStatusLabels[request.status]}
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    {request.status === "pending" ? (
+            {approvalQueue.length ? (
+              approvalQueue.slice(0, 20).map((item) => {
+                if (item.kind === "access_request") {
+                  const request = item.request;
+                  const user = item.user;
+
+                  return (
+                    <tr key={item.id} className="bg-amber-50/40">
+                      <td className="px-4 py-4 align-top">
+                        <Badge className="bg-amber-100 text-amber-900">คำขอสิทธิ์</Badge>
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <p className="font-semibold text-slate-950">{request.userName}</p>
+                        <p className="mt-1 text-xs text-slate-500">{request.userDepartment}</p>
+                        {user ? (
+                          <p className="mt-1 text-xs font-semibold text-slate-500">
+                            บัญชี: {userStatusLabels[user.status ?? "active"]}
+                          </p>
+                        ) : null}
+                        <p className="mt-2 line-clamp-2 max-w-xs text-xs leading-5 text-slate-500">
+                          {request.reason}
+                        </p>
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <div className="flex flex-wrap gap-1">
+                          {request.requestedRoles.map((role) => (
+                            <Badge key={role} className={roleTone[role]}>
+                              {roleLabels[role]}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 align-top text-slate-600">
+                        {request.requestedCategoryIds.length
+                          ? `${request.requestedCategoryIds.length} หมวด`
+                          : "All public / team defaults"}
+                      </td>
+                      <td className="px-4 py-4 align-top font-semibold text-amber-900">
+                        {requestStatusLabels[request.status]}
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            className={`${buttonStyles.primary} h-9 px-3`}
+                            disabled={isPending}
+                            onClick={() => reviewRequest(request.id, "approve")}
+                          >
+                            อนุมัติ
+                          </button>
+                          <button
+                            type="button"
+                            className={`${buttonStyles.secondary} h-9 px-3`}
+                            disabled={isPending}
+                            onClick={() => reviewRequest(request.id, "reject")}
+                          >
+                            ปฏิเสธ
+                          </button>
+                          {user ? (
+                            <button
+                              type="button"
+                              className={`${buttonStyles.secondary} h-9 px-3`}
+                              onClick={() => selectUser(user)}
+                            >
+                              กำหนดเอง
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                const user = item.user;
+
+                return (
+                  <tr key={item.id} className="bg-sky-50/40">
+                    <td className="px-4 py-4 align-top">
+                      <Badge className="bg-sky-100 text-sky-900">ผู้ใช้ใหม่</Badge>
+                    </td>
+                    <td className="px-4 py-4 align-top">
+                      <p className="font-semibold text-slate-950">{user.name}</p>
+                      <p className="mt-1 text-xs text-slate-500">{teamNames.get(user.teamId) ?? user.department}</p>
+                      <p className="mt-1 font-mono text-xs text-slate-400">{user.id}</p>
+                      <p className="mt-2 max-w-xs text-xs leading-5 text-slate-500">
+                        Login ผ่าน SSO แล้ว แต่ยังไม่ได้ส่งคำขอ role/scope
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 align-top">
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.map((role) => (
+                          <Badge key={role} className={roleTone[role]}>
+                            {roleLabels[role]}
+                          </Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 align-top text-slate-600">
+                      {scopedCategoryIds(user).length
+                        ? `${scopedCategoryIds(user).length} หมวด`
+                        : "All public / team defaults"}
+                    </td>
+                    <td className="px-4 py-4 align-top font-semibold text-sky-900">
+                      {userStatusLabels[user.status ?? "active"]}
+                    </td>
+                    <td className="px-4 py-4 align-top">
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           className={`${buttonStyles.primary} h-9 px-3`}
                           disabled={isPending}
-                          onClick={() => reviewRequest(request.id, "approve")}
+                          onClick={() => activateAsViewer(user)}
                         >
-                          อนุมัติ
+                          เปิดเป็น Viewer
                         </button>
                         <button
                           type="button"
                           className={`${buttonStyles.secondary} h-9 px-3`}
                           disabled={isPending}
-                          onClick={() => reviewRequest(request.id, "reject")}
+                          onClick={() => selectUser(user)}
                         >
-                          ปฏิเสธ
+                          กำหนดสิทธิ์
+                        </button>
+                        <button
+                          type="button"
+                          className={`${buttonStyles.danger} h-9 px-3`}
+                          disabled={isPending}
+                          onClick={() => suspendUser(user)}
+                        >
+                          ระงับ
                         </button>
                       </div>
-                    ) : (
-                      <span className="text-xs text-slate-400">ดำเนินการแล้ว</span>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr className="bg-slate-50">
                 <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
-                  ยังไม่มีคำขอสิทธิ์
+                  ไม่มีงานรออนุมัติ
                 </td>
               </tr>
             )}
@@ -260,7 +515,6 @@ export function UserPermissionManager({
         </table>
       </TableShell>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <TableShell
         title="ผู้ใช้ในระบบ"
         description="รายการนี้มาจากผู้ใช้ seed และผู้ใช้ที่ login ผ่าน SSO สำเร็จ"
@@ -289,6 +543,9 @@ export function UserPermissionManager({
                   <p className="mt-1 text-xs font-semibold text-slate-500">
                     {userStatusLabels[user.status ?? "active"]}
                   </p>
+                  {queuedUserIds.has(user.id) ? (
+                    <p className="mt-1 text-xs font-semibold text-amber-800">อยู่ในคิวอนุมัติ</p>
+                  ) : null}
                 </td>
                 <td className="px-4 py-4 align-top">
                   <div className="flex flex-wrap gap-1">
@@ -308,7 +565,7 @@ export function UserPermissionManager({
                     className={`${buttonStyles.secondary} h-9`}
                     onClick={() => selectUser(user)}
                   >
-                    แก้สิทธิ์
+                    {queuedUserIds.has(user.id) ? "กำหนดสิทธิ์" : "แก้สิทธิ์"}
                   </button>
                 </td>
               </tr>
@@ -317,21 +574,63 @@ export function UserPermissionManager({
         </table>
       </TableShell>
 
-      <aside className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        {selectedUser ? (
-          <>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Permission editor
-            </p>
-            <h2 className="mt-2 text-lg font-semibold text-slate-950">{selectedUser.name}</h2>
-            <p className="mt-1 text-sm text-slate-500">{selectedUser.department}</p>
+      {selectedUser ? (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/25">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            aria-label="ปิดตัวแก้สิทธิ์"
+            onClick={closePermissionEditor}
+          />
+          <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-slate-200 bg-slate-50 shadow-2xl">
+            <div className="border-b border-slate-200 bg-white px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Permission editor
+                  </p>
+                  <h2 className="mt-2 truncate text-xl font-semibold text-slate-950">
+                    {selectedUser.name}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">{selectedUser.department}</p>
+                </div>
+                <button
+                  type="button"
+                  className={`${buttonStyles.secondary} h-9 px-3`}
+                  onClick={closePermissionEditor}
+                >
+                  ปิด
+                </button>
+              </div>
+              <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-400">สถานะบัญชี</p>
+                  <p className="mt-1 font-semibold text-slate-800">
+                    {userStatusLabels[selectedUser.status ?? "active"]}
+                  </p>
+                </div>
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-400">แหล่งที่มา</p>
+                  <p className="mt-1 font-semibold text-slate-800">{selectedUser.source}</p>
+                </div>
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-400">Scope</p>
+                  <p className="mt-1 font-semibold text-slate-800">
+                    {scopeDraft.length ? `${scopeDraft.length} หมวด` : "Default"}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-            <div className="mt-5 space-y-5">
-              <fieldset>
-                <legend className="text-sm font-semibold text-slate-900">Roles</legend>
-                <div className="mt-3 grid gap-2">
+            <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
+              <section>
+                <h3 className="text-sm font-semibold text-slate-900">Roles</h3>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {roles.map((role) => (
-                    <label key={role} className="flex items-center gap-2 text-sm text-slate-700">
+                    <label
+                      key={role}
+                      className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                    >
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-slate-300"
@@ -342,60 +641,136 @@ export function UserPermissionManager({
                     </label>
                   ))}
                 </div>
-              </fieldset>
+              </section>
 
-              <fieldset>
-                <legend className="text-sm font-semibold text-slate-900">Category scope</legend>
-                <div className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-3">
-                  {categories.map((category) => (
-                    <label key={category.id} className="flex items-start gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 h-4 w-4 rounded border-slate-300"
-                        checked={scopeDraft.includes(category.id)}
-                        onChange={() => toggleScope(category.id)}
-                      />
-                      <span style={{ paddingLeft: category.depth * 12 }}>
-                        {category.name}
-                      </span>
-                    </label>
-                  ))}
+              <section>
+                <div className="flex items-end justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-slate-900">Category scope</h3>
+                  <span className="text-xs font-semibold text-slate-500">
+                    {scopeDraft.length ? `${scopeDraft.length} / ${categories.length} หมวด` : "ใช้ค่า default"}
+                  </span>
                 </div>
-              </fieldset>
+
+                <div className="mt-3 rounded-md border border-slate-200 bg-white">
+                  <div className="space-y-3 border-b border-slate-200 p-3">
+                    <input
+                      type="search"
+                      className="h-9 w-full rounded-md border border-slate-300 bg-slate-50 px-3 text-sm outline-none transition duration-200 placeholder:text-slate-400 focus:border-sky-700 focus:ring-2 focus:ring-sky-100"
+                      value={categoryQuery}
+                      onChange={(event) => setCategoryQuery(event.target.value)}
+                      placeholder="ค้นหาหมวดรายงาน"
+                    />
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <button
+                        type="button"
+                        className={`${buttonStyles.secondary} h-8 justify-center px-2 text-xs`}
+                        onClick={() => setScopePreset(allCategoryIds)}
+                      >
+                        เลือกทั้งหมด
+                      </button>
+                      <button
+                        type="button"
+                        className={`${buttonStyles.secondary} h-8 justify-center px-2 text-xs`}
+                        onClick={() => setScopePreset(teamCategoryIds)}
+                      >
+                        เฉพาะทีม
+                      </button>
+                      <button
+                        type="button"
+                        className={`${buttonStyles.secondary} h-8 justify-center px-2 text-xs`}
+                        onClick={() => setScopePreset(rootCategoryIds)}
+                      >
+                        หมวดหลัก
+                      </button>
+                      <button
+                        type="button"
+                        className={`${buttonStyles.secondary} h-8 justify-center px-2 text-xs`}
+                        onClick={() => setScopePreset([])}
+                      >
+                        ล้าง
+                      </button>
+                    </div>
+                    <p className="text-xs leading-5 text-slate-500">
+                      เลือกหมวดแม่เพื่อรวมหมวดย่อยทั้งหมดในสาขานั้น
+                    </p>
+                  </div>
+
+                  <div className="max-h-[42vh] space-y-1 overflow-y-auto p-2">
+                    {filteredCategories.length ? (
+                      filteredCategories.map((category) => {
+                        const branchState = getBranchState(category);
+
+                        return (
+                          <label
+                            key={category.id}
+                            className={`flex items-start gap-2 rounded-md px-2 py-1.5 text-sm text-slate-700 transition duration-200 hover:bg-slate-50 ${
+                              branchState.isPartial ? "bg-amber-50/60" : ""
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                              checked={branchState.isSelected}
+                              onChange={() => toggleScopeBranch(category)}
+                            />
+                            <span className="min-w-0 flex-1" style={{ paddingLeft: category.depth * 12 }}>
+                              <span className="block truncate">{category.name}</span>
+                              {branchState.total > 1 ? (
+                                <span className="block text-xs text-slate-400">
+                                  รวม {branchState.total} หมวดในสาขา
+                                  {branchState.isPartial ? " (เลือกบางส่วน)" : ""}
+                                </span>
+                              ) : null}
+                            </span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="px-2 py-6 text-center text-sm text-slate-500">ไม่พบหมวดที่ค้นหา</p>
+                    )}
+                  </div>
+                </div>
+              </section>
 
               {message ? (
                 <div className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700">
                   {message}
                 </div>
               ) : null}
+            </div>
 
-              <button
-                type="button"
-                className={`${buttonStyles.primary} h-10 w-full justify-center`}
-                disabled={isPending}
-                onClick={savePermissions}
-              >
-                {isPending ? "กำลังบันทึก" : "บันทึกสิทธิ์"}
-              </button>
+            <div className="border-t border-slate-200 bg-white px-5 py-4">
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <button
+                  type="button"
+                  className={`${buttonStyles.primary} h-10 justify-center`}
+                  disabled={isPending}
+                  onClick={savePermissions}
+                >
+                  {isPending
+                    ? "กำลังบันทึก"
+                    : (selectedUser.status ?? "active") === "pending"
+                      ? "บันทึกและเปิดใช้งาน"
+                      : "บันทึกสิทธิ์"}
+                </button>
 
-              <button
-                type="button"
-                className={`${buttonStyles.secondary} h-10 w-full justify-center`}
-                disabled={isPending}
-                onClick={startImpersonation}
-              >
-                สลับเป็น user/role นี้
-              </button>
-
-              <p className="text-xs leading-5 text-slate-500">
-                ปุ่มสลับตัวตนเป็นโหมดชั่วคราว ไม่เขียน role/scope ลงฐานข้อมูล
-                ส่วนการบันทึกสิทธิ์จะสร้าง audit log action permission.update
+                <button
+                  type="button"
+                  className={`${buttonStyles.secondary} h-10 justify-center`}
+                  disabled={isPending}
+                  onClick={startImpersonation}
+                >
+                  สลับตัวตน
+                </button>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                การบันทึกสิทธิ์จะสร้าง audit log action permission.update
+                และจะเปิดใช้งานบัญชีที่ยังรอเปิดใช้งาน
               </p>
             </div>
-          </>
-        ) : null}
-      </aside>
-      </div>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
@@ -116,13 +117,20 @@ export function AppNavbar({
           {/* Brand */}
           <Link
             href="/"
-            className="flex flex-col rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+            className="flex items-center gap-2.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
           >
-            <span className="flex items-center gap-2">
-              <span className="text-base font-semibold tracking-tight text-slate-950">Health Report Portal</span>
-              <span className="text-sm font-medium text-[#005f80]">CM PHO</span>
+            <Image
+              src="/LOGO_SSJ_1000.png"
+              alt="สำนักงานสาธารณสุขจังหวัดเชียงใหม่"
+              width={36}
+              height={36}
+              className="shrink-0"
+              priority
+            />
+            <span className="flex flex-col">
+              <span className="text-base font-semibold tracking-tight text-slate-950 leading-tight">Dashboard Hub</span>
+              <span className="text-[11px] text-slate-500 leading-tight">ศูนย์ข้อมูลสุขภาพ - Open Data</span>
             </span>
-            <span className="text-[11px] text-slate-500">สำนักงานสาธารณสุขจังหวัดเชียงใหม่</span>
           </Link>
 
           {/* Desktop nav links */}

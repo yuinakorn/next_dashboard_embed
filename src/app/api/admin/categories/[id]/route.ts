@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { AuthRequiredError, getCurrentUser } from "@/lib/auth/current-user";
-import { listManagedCategories, updateManagedCategory } from "@/lib/db/categories";
+import {
+  deleteManagedCategory,
+  getCategoryDeleteReadiness,
+  listManagedCategories,
+  updateManagedCategory,
+} from "@/lib/db/categories";
 import { listTeams } from "@/lib/db/users";
 import { canManageCategory } from "@/lib/permissions";
 import type { Category, CategoryStatus } from "@/lib/portal-types";
@@ -83,4 +88,64 @@ export async function PATCH(
   });
 
   return NextResponse.json({ ok: true, categories: await listManagedCategories() });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  let actor;
+
+  try {
+    actor = await getCurrentUser();
+  } catch (error) {
+    if (error instanceof AuthRequiredError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    throw error;
+  }
+
+  const { id } = await params;
+  const categories = await listManagedCategories();
+  const existing = categories.find((category) => category.id === id);
+
+  if (!existing) {
+    return NextResponse.json({ error: "Category was not found." }, { status: 404 });
+  }
+
+  const permissionCategory: Category = {
+    id: existing.id,
+    name: existing.name,
+    ownerTeamId: existing.ownerTeamId,
+    dashboardCount: existing.dashboardCount,
+  };
+
+  if (!canManageCategory(actor, permissionCategory)) {
+    return NextResponse.json({ error: "Category deletion is restricted." }, { status: 403 });
+  }
+
+  const readiness = await getCategoryDeleteReadiness(id);
+
+  if (!readiness.canDelete) {
+    return NextResponse.json(
+      {
+        error: readiness.reason ?? "Category cannot be deleted.",
+        readiness,
+      },
+      { status: 409 },
+    );
+  }
+
+  try {
+    await deleteManagedCategory({ actor, id });
+
+    return NextResponse.json({
+      ok: true,
+      categories: await listManagedCategories(),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to delete category.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

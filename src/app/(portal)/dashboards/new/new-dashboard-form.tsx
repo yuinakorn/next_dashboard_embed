@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { buttonStyles, fieldStyles } from "@/components/dashboard-ui";
 import type { CategoryOption } from "@/lib/category-utils";
 import { assessEmbedUrl, getEmbedStatusTone } from "@/lib/embed-policy";
@@ -119,6 +119,52 @@ function FieldError({ message }: { message?: string }) {
   }
 
   return <p className="mt-2 text-sm font-medium text-rose-700">{message}</p>;
+}
+
+type ToastProps = {
+  message: string;
+  type: "success" | "error";
+  link?: { href: string; label: string };
+  onDismiss: () => void;
+};
+
+function Toast({ message, type, link, onDismiss }: ToastProps) {
+  useEffect(() => {
+    const timer = setTimeout(onDismiss, 5000);
+    return () => clearTimeout(timer);
+  }, [onDismiss]);
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex max-w-sm items-start gap-3 rounded-xl border shadow-lg px-4 py-3 animate-in slide-in-from-bottom-4 fade-in duration-200
+      ${type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}"
+      style={type === "success"
+        ? { borderColor: "#a7f3d0", backgroundColor: "#f0fdf4", color: "#14532d" }
+        : { borderColor: "#fecaca", backgroundColor: "#fff1f2", color: "#7f1d1d" }
+      }
+      role="status"
+      aria-live="polite"
+    >
+      <span className="mt-0.5 shrink-0 text-lg leading-none">
+        {type === "success" ? "✓" : "✕"}
+      </span>
+      <div className="flex-1 text-sm font-medium leading-5">
+        {message}
+        {link ? (
+          <a href={link.href} className="ml-2 underline underline-offset-2 opacity-80 hover:opacity-100">
+            {link.label}
+          </a>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="ปิด"
+        className="shrink-0 opacity-50 hover:opacity-100 transition-opacity text-lg leading-none"
+      >
+        ×
+      </button>
+    </div>
+  );
 }
 
 function buildCategoryOptionTree(options: CategoryOption[]): CategoryOptionNode[] {
@@ -253,8 +299,7 @@ function DashboardMetadataForm({
     dataSourceNote: dashboard?.dataSourceNote ?? "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [submitResult, setSubmitResult] = useState<string | null>(null);
-  const [submitResultType, setSubmitResultType] = useState<"success" | "error">("success");
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error"; link?: { href: string; label: string } } | null>(null);
   const [savedDashboard, setSavedDashboard] = useState<CreatedDashboardResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [healthResult, setHealthResult] = useState<EmbedHealthResult | null>(null);
@@ -271,8 +316,6 @@ function DashboardMetadataForm({
   function updateField<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
     setState((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
-    setSubmitResult(null);
-    setSubmitResultType("success");
     setSavedDashboard(null);
     if (key === "embedUrl" || key === "provider") {
       setHealthResult(null);
@@ -318,13 +361,12 @@ function DashboardMetadataForm({
     setErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
-      setSubmitResult(null);
       return;
     }
 
     const status = intent === "draft" ? "draft" : "in_review";
     setIsSubmitting(true);
-    setSubmitResult(null);
+    setToast(null);
     setSavedDashboard(null);
 
     try {
@@ -357,26 +399,24 @@ function DashboardMetadataForm({
         const message = Array.isArray(payload.errors)
           ? payload.errors.join(", ")
           : payload.error ?? "ไม่สามารถบันทึกรายงานได้";
-        setSubmitResult(message);
-        setSubmitResultType("error");
+        setToast({ message, type: "error" });
         return;
       }
 
-      setSavedDashboard({
+      const result: CreatedDashboardResult = {
         id: payload.dashboard.id,
         title: payload.dashboard.title,
         status: payload.dashboard.status,
+      };
+      setSavedDashboard(result);
+      setToast({
+        message: mode === "edit" ? "บันทึกการแก้ไขเรียบร้อยแล้ว" : "บันทึกรายงานเรียบร้อยแล้ว",
+        type: "success",
+        link: { href: `/dashboards/${result.id}`, label: "เปิดรายงาน →" },
       });
-      setSubmitResult(
-        mode === "edit"
-          ? `อัปเดตข้อมูลกำกับรายงานแล้ว สถานะยังเป็น: ${payload.dashboard.status}`
-          : `บันทึกรายงานแล้ว สถานะ: ${payload.dashboard.status}`,
-      );
-      setSubmitResultType("success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "ไม่สามารถบันทึกรายงานได้";
-      setSubmitResult(message);
-      setSubmitResultType("error");
+      setToast({ message, type: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -395,24 +435,13 @@ function DashboardMetadataForm({
         </p>
       </div>
 
-      {submitResult ? (
-        <div
-          className={`mt-5 rounded-lg border p-4 text-sm font-medium ${
-            submitResultType === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-rose-200 bg-rose-50 text-rose-800"
-          }`}
-        >
-          {submitResult}
-          {savedDashboard ? (
-            <a
-              href={`/dashboards/${savedDashboard.id}`}
-              className="ml-3 underline"
-            >
-              เปิดรายงาน {savedDashboard.title}
-            </a>
-          ) : null}
-        </div>
+      {toast ? (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          link={toast.link}
+          onDismiss={() => setToast(null)}
+        />
       ) : null}
 
       <form className="mt-5 space-y-5" onSubmit={(event) => event.preventDefault()}>
