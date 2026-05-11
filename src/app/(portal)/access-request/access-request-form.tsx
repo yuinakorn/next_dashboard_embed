@@ -40,7 +40,7 @@ export function AccessRequestForm({
   const [roleDraft, setRoleDraft] = useState<PortalRole[]>(defaultRoles);
   const [categoryDraft, setCategoryDraft] = useState<string[]>([]);
   const [reason, setReason] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [isPending, startTransition] = useTransition();
   const hasPendingRequest = requests.some((request) => request.status === "pending");
   const visibleRoles = useMemo(
@@ -81,11 +81,11 @@ export function AccessRequestForm({
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
 
       if (!response.ok) {
-        setMessage(body?.error ?? "ไม่สามารถส่งคำขอได้");
+        setMessage({ text: body?.error ?? "ไม่สามารถส่งคำขอได้", type: "error" });
         return;
       }
 
-      setMessage("ส่งคำขอแล้ว ผู้ดูแลระบบจะตรวจสอบและอนุมัติสิทธิ์ให้");
+      setMessage({ text: "ส่งคำขอแล้ว ผู้ดูแลระบบจะตรวจสอบและอนุมัติสิทธิ์ให้", type: "success" });
       window.location.reload();
     });
   }
@@ -148,8 +148,15 @@ export function AccessRequestForm({
         </label>
 
         {message ? (
-          <div className="mt-4 rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-3 py-2 text-sm text-[oklch(0.3_0.018_255)]">
-            {message}
+          <div
+            className="mt-4 rounded-md border px-3 py-2 text-sm font-medium"
+            style={
+              message.type === "success"
+                ? { borderColor: "oklch(0.8 0.07 165)", background: "oklch(0.96 0.025 165)", color: "oklch(0.4 0.1 165)" }
+                : { borderColor: "oklch(0.85 0.06 25)", background: "oklch(0.96 0.03 25)", color: "oklch(0.42 0.13 25)" }
+            }
+          >
+            {message.text}
           </div>
         ) : null}
 

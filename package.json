@@ -1,6 +1,6 @@
 {
   "name": "next_dashboard_embed",
-  "version": "1.0.5",
+  "version": "1.0.5d",
   "private": true,
   "scripts": {
     "dev": "next dev",

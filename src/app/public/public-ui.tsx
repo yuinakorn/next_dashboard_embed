@@ -170,9 +170,13 @@ export function PublicSignalPreview({
         </span>
       </div>
 
-      <div className="mt-5 grid grid-cols-12 items-end gap-1.5" aria-hidden="true">
+      <div
+        className="mt-5 grid grid-cols-12 items-end gap-1.5"
+        role="img"
+        aria-label="ภาพประกอบการแสดงผลรายงาน"
+      >
         {barHeights.map((height, index) => {
-          const color = index > 8 ? palette.accentDeep : index > 4 ? "oklch(0.6 0.12 220)" : palette.emerald;
+          const opacity = 0.28 + (height / 100) * 0.58;
           return (
             <div
               key={`${height}-${index}`}
@@ -181,12 +185,15 @@ export function PublicSignalPreview({
             >
               <div
                 className="w-full rounded-sm transition-all duration-300"
-                style={{ height: `${height}%`, background: color }}
+                style={{ height: `${height}%`, background: `oklch(0.45 0.09 258 / ${opacity})` }}
               />
             </div>
           );
         })}
       </div>
+      <p className="mt-1.5 text-center text-[10px] italic" style={{ color: palette.inkFaint }}>
+        ภาพประกอบ
+      </p>
 
       <dl className="mt-5 grid gap-2 sm:grid-cols-3">
         <div className="rounded-md p-3" style={{ background: palette.emeraldSoft }}>
@@ -223,8 +230,13 @@ export function PublicSignalPreview({
           </dd>
         </div>
       </dl>
-      {/* keep reportCount referenced for callers that pass it */}
-      <span className="sr-only">รายงานทั้งหมด {reportCount}</span>
+      <p className="mt-3 text-center text-[11px]" style={{ color: palette.inkFaint }}>
+        รายงานทั้งหมด{" "}
+        <span className="font-semibold tabular-nums" style={{ color: palette.inkMuted }}>
+          {reportCount.toLocaleString("th-TH")}
+        </span>{" "}
+        รายการ
+      </p>
     </div>
   );
 }
@@ -282,7 +294,7 @@ export function CategoryCard({ category }: { category: PortalCategory }) {
               style={{ background: palette.indigo }}
               aria-hidden="true"
             />
-            ต้อง login {category.loginRequiredReportCount}
+            ต้องเข้าสู่ระบบ {category.loginRequiredReportCount}
           </span>
         ) : null}
       </div>
@@ -392,7 +404,7 @@ export function ReportSearchForm({
           </button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[190px_minmax(220px,1fr)_170px_160px_96px]">
-          <select name="provider" className={`${fieldStyles} h-10`} defaultValue={filters.provider}>
+          <select aria-label="กรองตาม provider" name="provider" className={`${fieldStyles} h-10`} defaultValue={filters.provider}>
             <option value="all">ทุก provider</option>
             {providers.map((provider) => (
               <option key={provider} value={provider}>
@@ -400,7 +412,7 @@ export function ReportSearchForm({
               </option>
             ))}
           </select>
-          <select name="category" className={`${fieldStyles} h-10`} defaultValue={filters.category}>
+          <select aria-label="กรองตามหมวด" name="category" className={`${fieldStyles} h-10`} defaultValue={filters.category}>
             <option value="all">ทุกหมวด</option>
             {categoryOptions.map((category) => (
               <option key={category.id} value={category.id}>
@@ -409,12 +421,12 @@ export function ReportSearchForm({
               </option>
             ))}
           </select>
-          <select name="access" className={`${fieldStyles} h-10`} defaultValue={filters.access}>
+          <select aria-label="กรองตามสิทธิ์เข้าถึง" name="access" className={`${fieldStyles} h-10`} defaultValue={filters.access}>
             <option value="all">ทุกสิทธิ์เข้าถึง</option>
             <option value="public">เปิดดูได้ทันที</option>
-            <option value="login">ต้อง login</option>
+            <option value="login">ต้องเข้าสู่ระบบ</option>
           </select>
-          <select name="sort" className={`${fieldStyles} h-10`} defaultValue={filters.sort}>
+          <select aria-label="เรียงลำดับ" name="sort" className={`${fieldStyles} h-10`} defaultValue={filters.sort}>
             <option value="views_desc">ยอดดูสูงสุด</option>
             <option value="updated_desc">อัปเดตล่าสุด</option>
             <option value="title_asc">ชื่อ A-Z</option>
@@ -498,18 +510,27 @@ export function ReportCard({ dashboard }: { dashboard: Dashboard }) {
             <span aria-hidden="true">→</span>
           </Link>
         ) : (
-          <Link
-            href={`/login?next=/dashboards/${dashboard.id}`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border px-3.5 text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:bg-[oklch(0.955_0.005_250)]"
-            style={{
-              borderColor: palette.border,
-              color: palette.ink,
-              outlineColor: palette.accent,
-            }}
-          >
-            เข้าสู่ระบบเพื่อเปิด
-            <span aria-hidden="true">→</span>
-          </Link>
+          <div className="flex flex-col items-end gap-1.5">
+            <Link
+              href={`/login?next=/dashboards/${dashboard.id}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border px-3.5 text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:bg-[oklch(0.955_0.005_250)]"
+              style={{
+                borderColor: palette.border,
+                color: palette.ink,
+                outlineColor: palette.accent,
+              }}
+            >
+              เข้าสู่ระบบเพื่อเปิด
+              <span aria-hidden="true">→</span>
+            </Link>
+            <Link
+              href="/access-request"
+              className="text-[11px] font-medium hover:underline"
+              style={{ color: palette.inkMuted }}
+            >
+              ยังไม่มีบัญชี? ขอสิทธิ์เข้าถึง
+            </Link>
+          </div>
         )}
       </div>
     </article>

@@ -101,7 +101,7 @@ export function CategoryManager({
     ),
   );
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -156,12 +156,12 @@ export function CategoryManager({
       } | null;
 
       if (!response.ok || !body?.categories) {
-        setMessage(body?.error ?? "ไม่สามารถบันทึกหมวดรายงานได้");
+        setMessage({ text: body?.error ?? "ไม่สามารถบันทึกหมวดรายงานได้", type: "error" });
         return;
       }
 
       setCategories(body.categories);
-      setMessage("บันทึกหมวดรายงานแล้ว");
+      setMessage({ text: "บันทึกหมวดรายงานแล้ว", type: "success" });
     });
   }
 
@@ -180,14 +180,14 @@ export function CategoryManager({
       } | null;
 
       if (!response.ok || !body?.categories) {
-        setMessage(body?.error ?? "ไม่สามารถสร้างหมวดรายงานได้");
+        setMessage({ text: body?.error ?? "ไม่สามารถสร้างหมวดรายงานได้", type: "error" });
         return;
       }
 
       setCategories(body.categories);
       setSelectedId(body.id ?? selectedId);
       setCreateDraft(defaultDraft(teams, defaultParentId));
-      setMessage("สร้างหมวดรายงานแล้ว");
+      setMessage({ text: "สร้างหมวดรายงานแล้ว", type: "success" });
       setIsCreateDrawerOpen(false);
     });
   }
@@ -204,7 +204,7 @@ export function CategoryManager({
     }
 
     if (dragged.parentId !== targetNode.parentId) {
-      setMessage("ย้ายลำดับได้เฉพาะภายในหมวดแม่เดียวกัน");
+      setMessage({ text: "ย้ายลำดับได้เฉพาะภายในหมวดแม่เดียวกัน", type: "error" });
       return;
     }
 
@@ -263,7 +263,7 @@ export function CategoryManager({
         const lastOk = [...responses].reverse().find((response) => response.ok);
 
         if (!lastOk) {
-          setMessage("ไม่สามารถย้ายลำดับหมวดได้");
+          setMessage({ text: "ไม่สามารถย้ายลำดับหมวดได้", type: "error" });
           return;
         }
 
@@ -275,9 +275,9 @@ export function CategoryManager({
           setCategories(body.categories);
         }
 
-        setMessage("ย้ายลำดับหมวดเรียบร้อย");
+        setMessage({ text: "ย้ายลำดับหมวดเรียบร้อย", type: "success" });
       } catch {
-        setMessage("ไม่สามารถย้ายลำดับหมวดได้");
+        setMessage({ text: "ไม่สามารถย้ายลำดับหมวดได้", type: "error" });
       }
     });
   }
@@ -496,8 +496,15 @@ export function CategoryManager({
         </section>
 
         {message ? (
-          <div className="rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-3 py-2 text-sm text-[oklch(0.3_0.018_255)]">
-            {message}
+          <div
+            className="rounded-md border px-3 py-2 text-sm font-medium"
+            style={
+              message.type === "success"
+                ? { borderColor: "oklch(0.8 0.07 165)", background: "oklch(0.96 0.025 165)", color: "oklch(0.4 0.1 165)" }
+                : { borderColor: "oklch(0.85 0.06 25)", background: "oklch(0.96 0.03 25)", color: "oklch(0.42 0.13 25)" }
+            }
+          >
+            {message.text}
           </div>
         ) : null}
       </aside>

@@ -76,6 +76,8 @@ export function UserPermissionManager({
   const [categoryQuery, setCategoryQuery] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [suspendTarget, setSuspendTarget] = useState<{ userId: string; reason: string } | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<{ requestId: string; decision: "approve" | "reject"; note: string } | null>(null);
   const teamNames = useMemo(
     () => new Map(teams.map((team) => [team.id, team.name])),
     [teams],
@@ -260,28 +262,29 @@ export function UserPermissionManager({
     });
   }
 
-  function suspendUser(user: ManagedPortalUser) {
-    const disabledReason = window.prompt("ระบุเหตุผลที่ระงับผู้ใช้", "ไม่อนุมัติการใช้งาน Portal") ?? "";
+  function startSuspend(user: ManagedPortalUser) {
+    setSuspendTarget({ userId: user.id, reason: "" });
+    setMessage(null);
+  }
 
-    if (disabledReason.trim().length < 5) {
-      setMessage("กรุณาระบุเหตุผลอย่างน้อย 5 ตัวอักษร");
+  function confirmSuspend() {
+    if (!suspendTarget) return;
+    if (suspendTarget.reason.trim().length < 10) {
+      setMessage("กรุณาระบุเหตุผลอย่างน้อย 10 ตัวอักษร");
       return;
     }
-
     setMessage(null);
     startTransition(async () => {
-      const response = await fetch(`/api/admin/users/${user.id}/status`, {
+      const response = await fetch(`/api/admin/users/${suspendTarget.userId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "suspended", disabledReason }),
+        body: JSON.stringify({ status: "suspended", disabledReason: suspendTarget.reason }),
       });
-
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
         setMessage(body?.error ?? "ไม่สามารถระงับผู้ใช้ได้");
         return;
       }
-
       window.location.reload();
     });
   }
@@ -313,31 +316,29 @@ export function UserPermissionManager({
     });
   }
 
-  function reviewRequest(requestId: string, decision: "approve" | "reject") {
-    const note =
-      decision === "reject"
-        ? window.prompt("ระบุเหตุผลที่ปฏิเสธคำขอ") ?? ""
-        : window.prompt("หมายเหตุประกอบการอนุมัติ", "อนุมัติสิทธิ์ตามคำขอ") ?? "";
+  function startReview(requestId: string, decision: "approve" | "reject") {
+    setReviewTarget({ requestId, decision, note: decision === "approve" ? "อนุมัติสิทธิ์ตามคำขอ" : "" });
+    setMessage(null);
+  }
 
-    if (decision === "reject" && note.trim().length < 5) {
-      setMessage("กรุณาระบุเหตุผลเมื่อปฏิเสธคำขอ");
+  function confirmReview() {
+    if (!reviewTarget) return;
+    if (reviewTarget.decision === "reject" && reviewTarget.note.trim().length < 10) {
+      setMessage("กรุณาระบุเหตุผลเมื่อปฏิเสธคำขอ (อย่างน้อย 10 ตัวอักษร)");
       return;
     }
-
     setMessage(null);
     startTransition(async () => {
-      const response = await fetch(`/api/admin/access-requests/${requestId}`, {
+      const response = await fetch(`/api/admin/access-requests/${reviewTarget.requestId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision, note }),
+        body: JSON.stringify({ decision: reviewTarget.decision, note: reviewTarget.note }),
       });
-
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
         setMessage(body?.error ?? "ไม่สามารถดำเนินการคำขอได้");
         return;
       }
-
       window.location.reload();
     });
   }
@@ -409,33 +410,56 @@ export function UserPermissionManager({
                         {requestStatusLabels[request.status]}
                       </td>
                       <td className="px-4 py-4 align-top">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            className={`${buttonStyles.primary} h-9 px-3`}
-                            disabled={isPending}
-                            onClick={() => reviewRequest(request.id, "approve")}
-                          >
-                            อนุมัติ
-                          </button>
-                          <button
-                            type="button"
-                            className={`${buttonStyles.secondary} h-9 px-3`}
-                            disabled={isPending}
-                            onClick={() => reviewRequest(request.id, "reject")}
-                          >
-                            ปฏิเสธ
-                          </button>
-                          {user ? (
+                        {reviewTarget?.requestId === request.id ? (
+                          <div className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3">
+                            <p className="text-xs font-semibold text-[oklch(0.21_0.015_255)]">
+                              {reviewTarget.decision === "approve" ? "ยืนยันอนุมัติคำขอ?" : "ระบุเหตุผลที่ปฏิเสธ"}
+                            </p>
+                            <input
+                              type="text"
+                              className="mt-2 h-9 w-full rounded-md border border-[oklch(0.85_0.008_250)] bg-white px-3 text-sm outline-none focus:border-[oklch(0.5_0.14_258)] focus:ring-2 focus:ring-[oklch(0.95_0.028_258)]"
+                              placeholder={reviewTarget.decision === "approve" ? "หมายเหตุ (ไม่บังคับ)" : "เหตุผล (อย่างน้อย 10 ตัวอักษร)"}
+                              value={reviewTarget.note}
+                              onChange={(e) => setReviewTarget((prev) => prev ? { ...prev, note: e.target.value } : null)}
+                            />
+                            <div className="mt-2 flex gap-2">
+                              <button type="button" className={`${buttonStyles.primary} h-8 px-3 text-xs`} disabled={isPending} onClick={confirmReview}>
+                                ยืนยัน
+                              </button>
+                              <button type="button" className={`${buttonStyles.secondary} h-8 px-3 text-xs`} disabled={isPending} onClick={() => setReviewTarget(null)}>
+                                ยกเลิก
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className={`${buttonStyles.primary} h-9 px-3`}
+                              disabled={isPending}
+                              onClick={() => startReview(request.id, "approve")}
+                            >
+                              อนุมัติ
+                            </button>
                             <button
                               type="button"
                               className={`${buttonStyles.secondary} h-9 px-3`}
-                              onClick={() => selectUser(user)}
+                              disabled={isPending}
+                              onClick={() => startReview(request.id, "reject")}
                             >
-                              กำหนดเอง
+                              ปฏิเสธ
                             </button>
-                          ) : null}
-                        </div>
+                            {user ? (
+                              <button
+                                type="button"
+                                className={`${buttonStyles.secondary} h-9 px-3`}
+                                onClick={() => selectUser(user)}
+                              >
+                                กำหนดเอง
+                              </button>
+                            ) : null}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -491,14 +515,35 @@ export function UserPermissionManager({
                         >
                           กำหนดสิทธิ์
                         </button>
-                        <button
-                          type="button"
-                          className={`${buttonStyles.danger} h-9 px-3`}
-                          disabled={isPending}
-                          onClick={() => suspendUser(user)}
-                        >
-                          ระงับ
-                        </button>
+                        {suspendTarget?.userId === user.id ? (
+                          <div className="rounded-lg border border-[oklch(0.88_0.04_25)] bg-[oklch(0.98_0.012_25)] p-3">
+                            <p className="text-xs font-semibold text-[oklch(0.42_0.13_25)]">ระบุเหตุผลที่ระงับ</p>
+                            <input
+                              type="text"
+                              className="mt-2 h-9 w-full rounded-md border border-[oklch(0.85_0.06_25)] bg-white px-3 text-sm outline-none focus:border-[oklch(0.5_0.14_258)] focus:ring-2 focus:ring-[oklch(0.95_0.028_258)]"
+                              placeholder="เหตุผล (อย่างน้อย 10 ตัวอักษร)"
+                              value={suspendTarget.reason}
+                              onChange={(e) => setSuspendTarget((prev) => prev ? { ...prev, reason: e.target.value } : null)}
+                            />
+                            <div className="mt-2 flex gap-2">
+                              <button type="button" className={`${buttonStyles.danger} h-8 px-3 text-xs`} disabled={isPending} onClick={confirmSuspend}>
+                                ยืนยันระงับ
+                              </button>
+                              <button type="button" className={`${buttonStyles.secondary} h-8 px-3 text-xs`} disabled={isPending} onClick={() => setSuspendTarget(null)}>
+                                ยกเลิก
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className={`${buttonStyles.danger} h-9 px-3`}
+                            disabled={isPending}
+                            onClick={() => startSuspend(user)}
+                          >
+                            ระงับ
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -733,7 +778,7 @@ export function UserPermissionManager({
               </section>
 
               {message ? (
-                <div className="rounded-md border border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-3 py-2 text-sm text-[oklch(0.3_0.018_255)]">
+                <div className="rounded-md border border-[oklch(0.85_0.06_25)] bg-[oklch(0.96_0.03_25)] px-3 py-2 text-sm font-medium text-[oklch(0.42_0.13_25)]">
                   {message}
                 </div>
               ) : null}

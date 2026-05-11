@@ -445,6 +445,11 @@ function DashboardMetadataForm({
       ) : null}
 
       <form className="mt-5 space-y-5" onSubmit={(event) => event.preventDefault()}>
+        <div className="flex items-center gap-3 pb-1">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[oklch(0.5_0.012_255)]">ข้อมูลพื้นฐาน</h3>
+          <div className="h-px flex-1 bg-[oklch(0.91_0.006_250)]" />
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
             <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">ชื่อรายงาน</span>
@@ -481,6 +486,11 @@ function DashboardMetadataForm({
           />
           <FieldError message={errors.description} />
         </label>
+
+        <div className="flex items-center gap-3 pb-1 pt-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[oklch(0.5_0.012_255)]">การเข้าถึงและหมวดหมู่</h3>
+          <div className="h-px flex-1 bg-[oklch(0.91_0.006_250)]" />
+        </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
@@ -529,6 +539,11 @@ function DashboardMetadataForm({
           </label>
         ) : null}
 
+        <div className="flex items-center gap-3 pb-1 pt-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[oklch(0.5_0.012_255)]">การฝังรายงาน</h3>
+          <div className="h-px flex-1 bg-[oklch(0.91_0.006_250)]" />
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
             <span className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">Embed URL ของรายงาน</span>
@@ -552,6 +567,11 @@ function DashboardMetadataForm({
             />
             <FieldError message={errors.externalUrl} />
           </label>
+        </div>
+
+        <div className="flex items-center gap-3 pb-1 pt-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[oklch(0.5_0.012_255)]">ข้อมูลเพิ่มเติม</h3>
+          <div className="h-px flex-1 bg-[oklch(0.91_0.006_250)]" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -589,7 +609,7 @@ function DashboardMetadataForm({
           <FieldError message={errors.dataSourceNote} />
         </label>
 
-        <section className="overflow-hidden rounded-lg border border-[oklch(0.91_0.006_250)]">
+        {state.embedUrl.trim() ? <section className="overflow-hidden rounded-lg border border-[oklch(0.91_0.006_250)]">
           <div className="flex flex-col gap-3 border-b border-[oklch(0.91_0.006_250)] bg-[oklch(0.955_0.005_250)] px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-[oklch(0.3_0.018_255)]">ตัวอย่างการแสดงรายงาน</h3>
@@ -672,7 +692,7 @@ function DashboardMetadataForm({
               ) : null}
             </div>
           )}
-        </section>
+        </section> : null}
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-[oklch(0.91_0.006_250)] pt-5">
           {mode === "create" ? (

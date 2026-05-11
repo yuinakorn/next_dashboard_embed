@@ -84,14 +84,9 @@ export function FavoriteButton({
 export function RestoreReportButton({ dashboardId }: { dashboardId: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   async function restoreReport() {
-    const confirmed = window.confirm("กู้คืนรายงานนี้กลับเป็นสถานะร่างหรือไม่");
-
-    if (!confirmed) {
-      return;
-    }
-
     setPending(true);
     setError(null);
 
@@ -101,7 +96,7 @@ export function RestoreReportButton({ dashboardId }: { dashboardId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "restore",
-          note: "Restored from report detail page.",
+          note: "กู้คืนจากหน้ารายละเอียดรายงาน",
         }),
       });
 
@@ -113,9 +108,40 @@ export function RestoreReportButton({ dashboardId }: { dashboardId: string }) {
       window.location.reload();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "ไม่สามารถกู้คืนรายงานได้");
+      setShowConfirm(false);
     } finally {
       setPending(false);
     }
+  }
+
+  if (showConfirm) {
+    return (
+      <div className="rounded-lg border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-3">
+        <p className="text-sm font-semibold text-[oklch(0.21_0.015_255)]">กู้คืนรายงานนี้?</p>
+        <p className="mt-1 text-xs text-[oklch(0.5_0.012_255)]">
+          รายงานจะกลับเป็นฉบับร่างและต้องส่งตรวจใหม่
+        </p>
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            className={`${buttonStyles.primary} h-8 px-3 text-xs`}
+            disabled={pending}
+            onClick={restoreReport}
+          >
+            {pending ? "กำลังกู้คืน" : "ยืนยัน"}
+          </button>
+          <button
+            type="button"
+            className={`${buttonStyles.secondary} h-8 px-3 text-xs`}
+            disabled={pending}
+            onClick={() => setShowConfirm(false)}
+          >
+            ยกเลิก
+          </button>
+        </div>
+        {error ? <p className="mt-2 text-xs text-rose-600">{error}</p> : null}
+      </div>
+    );
   }
 
   return (
@@ -124,9 +150,9 @@ export function RestoreReportButton({ dashboardId }: { dashboardId: string }) {
         type="button"
         className={`${buttonStyles.primary} h-9 px-3 text-xs`}
         disabled={pending}
-        onClick={restoreReport}
+        onClick={() => setShowConfirm(true)}
       >
-        {pending ? "กำลังกู้คืน" : "กู้คืนรายงาน"}
+        กู้คืนรายงาน
       </button>
       {error ? <span className="text-xs text-rose-600">{error}</span> : null}
     </div>

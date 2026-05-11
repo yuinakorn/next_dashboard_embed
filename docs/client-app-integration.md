@@ -115,15 +115,15 @@ Response:
   "access_token": "{APP_ACCESS_TOKEN}",
   "user": {
     "id": "usr_xxxxx",
-    "provider_id": "07500C74170F9",
-    "account_id": "34038718629193",
+    "provider_id": "07500C74xxxxx",
+    "account_id": "3403871862xxxx",
     "name_prefix": "Mr.",
-    "name": "Nakhon",
-    "surname": "Mongkolchotyada",
-    "birthdate": "1985-12-02",
-    "mobile_no": "0966926966",
+    "name": "Nakxxx",
+    "surname": "Mongkolxxxxxxxxx",
+    "birthdate": "2000-01-01",
+    "mobile_no": "096xxxxxxx",
     "hash_cid": "sha256-hash",
-    "name_th": "นคร มงคลโชติญาดา",
+    "name_th": "นxx มงคลxxxxxxxxx",
     "name_eng": null,
     "organizations": [
       {

@@ -444,7 +444,7 @@ export default async function Home() {
                     className="text-sm"
                     style={{ color: palette.accentDeep, opacity: 0.7 }}
                   >
-                    / {publishedReports.length.toLocaleString("th-TH")} รายการที่เปิดได้
+                    / {dashboards.length.toLocaleString("th-TH")} รายงานทั้งหมด
                   </span>
                 </div>
                 <p

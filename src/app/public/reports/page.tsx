@@ -1,5 +1,6 @@
 import { listPortalCategories } from "@/lib/db/categories";
 import { listPublishedDashboardsForPortal } from "@/lib/db/dashboards";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 import {
@@ -27,7 +28,7 @@ export default async function PublicReportsPage({
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6 px-5 py-8 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="lg:sticky lg:top-4 lg:self-start">
+      <aside className="lg:sticky lg:top-[4.5rem] lg:self-start">
         <div className="rounded-xl border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] p-4">
           <h2 className="text-base font-semibold text-[oklch(0.21_0.015_255)]">หมวดรายงาน</h2>
           <div className="mt-4">
@@ -57,8 +58,14 @@ export default async function PublicReportsPage({
             ))}
           </div>
           {!filteredDashboards.length ? (
-            <div className="mt-4 rounded-xl border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] px-4 py-8 text-center text-sm text-[oklch(0.5_0.012_255)]">
-              ไม่พบรายงานที่ตรงกับเงื่อนไขการค้นหา
+            <div className="mt-4 rounded-xl border border-[oklch(0.91_0.006_250)] bg-[oklch(0.998_0.002_250)] px-4 py-10 text-center">
+              <p className="text-sm text-[oklch(0.5_0.012_255)]">ไม่พบรายงานที่ตรงกับเงื่อนไขการค้นหา</p>
+              <Link
+                href="/public/reports"
+                className="mt-3 inline-block text-sm font-semibold text-[oklch(0.4_0.13_260)] hover:text-[oklch(0.25_0.09_262)]"
+              >
+                ล้างตัวกรองทั้งหมด →
+              </Link>
             </div>
           ) : null}
         </section>
