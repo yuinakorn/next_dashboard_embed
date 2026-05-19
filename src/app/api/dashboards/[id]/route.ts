@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { getDashboard, updateDashboard } from "@/lib/db/dashboards";
+import { deleteDashboard, getDashboard, updateDashboard } from "@/lib/db/dashboards";
 import {
   canArchiveDashboard,
   canCreateDashboard,
+  canDeleteDashboard,
   canPublishDashboard,
   canUpdateDashboard,
 } from "@/lib/permissions";
@@ -140,6 +141,36 @@ export async function PATCH(
     return NextResponse.json({ dashboard: updatedDashboard });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update dashboard.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const currentUser = await getCurrentUser();
+  const { id } = await params;
+  const dashboard = await getDashboard(id, currentUser.id);
+
+  if (!dashboard) {
+    return NextResponse.json({ error: "Dashboard not found" }, { status: 404 });
+  }
+
+  if (!canDeleteDashboard(currentUser, dashboard)) {
+    return NextResponse.json({ error: "Current user cannot delete this dashboard" }, { status: 403 });
+  }
+
+  try {
+    await deleteDashboard({
+      dashboardId: id,
+      actorUserId: currentUser.id,
+      actorName: currentUser.name,
+    });
+
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to delete dashboard.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

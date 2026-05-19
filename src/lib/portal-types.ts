@@ -39,6 +39,7 @@ export type PortalPermission =
   | "dashboard:publish"
   | "dashboard:archive"
   | "dashboard:restore"
+  | "dashboard:delete"
   | "dashboard:pin"
   | "permission:manage"
   | "audit:read";

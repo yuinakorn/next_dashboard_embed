@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonStyles } from "@/components/dashboard-ui";
+import { DeleteReportButton } from "@/components/delete-report-button";
 
 export const dynamic = "force-dynamic";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
@@ -10,6 +11,7 @@ import { getDashboard } from "@/lib/db/dashboards";
 import {
   canArchiveDashboard,
   canCreateDashboard,
+  canDeleteDashboard,
   canPublishDashboard,
   canUpdateDashboard,
   getUserPermissions,
@@ -38,6 +40,7 @@ export default async function EditDashboardPage({ params }: EditDashboardPagePro
   );
   const canManageStatus =
     canPublishDashboard(currentUser, dashboard) || canArchiveDashboard(currentUser, dashboard);
+  const canDelete = canDeleteDashboard(currentUser, dashboard);
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.003_250)] text-[oklch(0.21_0.015_255)]">
@@ -134,6 +137,22 @@ export default async function EditDashboardPage({ params }: EditDashboardPagePro
               ))}
             </div>
           </section>
+
+          {canDelete ? (
+            <section className="rounded-lg border border-[oklch(0.88_0.04_25)] bg-[oklch(0.985_0.012_25)] p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-[oklch(0.42_0.13_25)]">ลบรายงาน</h2>
+              <p className="mt-2 text-sm leading-6 text-[oklch(0.5_0.012_255)]">
+                การลบจะเอารายงานนี้ออกจาก catalog ถาวร และบันทึกเหตุการณ์ไว้ใน audit log
+              </p>
+              <div className="mt-3">
+                <DeleteReportButton
+                  dashboardId={dashboard.id}
+                  title={dashboard.title}
+                  redirectTo="/catalog"
+                />
+              </div>
+            </section>
+          ) : null}
         </aside>
       </div>
     </main>

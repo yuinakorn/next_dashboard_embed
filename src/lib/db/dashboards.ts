@@ -89,6 +89,12 @@ export type DashboardLifecycleInput = {
   note?: string;
 };
 
+export type DeleteDashboardInput = {
+  dashboardId: string;
+  actorUserId: string;
+  actorName: string;
+};
+
 function rowToDashboard(row: DashboardRow): Dashboard {
   const categoryPath = row.category_path?.split(" / ").filter(Boolean) ?? [];
   const categoryAncestorIds = row.category_ancestor_ids?.split(",").filter(Boolean) ?? [];
@@ -557,6 +563,66 @@ export async function updateDashboard(input: UpdateDashboardInput): Promise<Dash
       throw new Error("Updated dashboard could not be loaded.");
     }
     return dashboard;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function deleteDashboard(input: DeleteDashboardInput): Promise<void> {
+  const pool = getDbPool();
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+    const before = await getDashboardForUpdate(connection, input.dashboardId);
+
+    if (!before) {
+      throw new Error("Dashboard not found.");
+    }
+
+    await connection.query<ResultSetHeader>(
+      `
+        INSERT INTO portal_audit_logs (
+          id, actor_user_id, actor_name, action, entity_type, entity_id, entity_title,
+          note, before_json
+        )
+        VALUES (
+          :auditId, :actorUserId, :actorName, 'dashboard.delete', 'dashboard', :entityId, :entityTitle,
+          :note, :beforeJson
+        )
+      `,
+      {
+        auditId: `audit-${crypto.randomUUID()}`,
+        actorUserId: input.actorUserId,
+        actorName: input.actorName,
+        entityId: input.dashboardId,
+        entityTitle: before.title,
+        note: "Dashboard permanently deleted.",
+        beforeJson: JSON.stringify({
+          id: before.id,
+          title: before.title,
+          description: before.description,
+          provider: before.provider,
+          categoryId: before.category_id,
+          status: before.status,
+          sensitivity: before.sensitivity,
+          embedUrl: before.embed_url,
+          externalUrl: before.external_url,
+          refreshFrequency: before.refresh_frequency,
+          dataSourceNote: before.data_source_note,
+        }),
+      },
+    );
+
+    await connection.query<ResultSetHeader>(
+      "DELETE FROM portal_dashboards WHERE id = :id",
+      { id: input.dashboardId },
+    );
+
+    await connection.commit();
   } catch (error) {
     await connection.rollback();
     throw error;

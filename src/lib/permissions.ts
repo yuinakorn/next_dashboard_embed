@@ -17,6 +17,7 @@ const rolePermissions: Record<PortalRole, PortalPermission[]> = {
     "dashboard:publish",
     "dashboard:archive",
     "dashboard:restore",
+    "dashboard:delete",
     "dashboard:pin",
     "permission:manage",
     "audit:read",
@@ -29,6 +30,7 @@ const rolePermissions: Record<PortalRole, PortalPermission[]> = {
     "dashboard:publish",
     "dashboard:archive",
     "dashboard:restore",
+    "dashboard:delete",
     "dashboard:pin",
     "audit:read",
   ],
@@ -152,6 +154,18 @@ export function canRestoreDashboard(user: PortalUser, dashboard: Dashboard): boo
   }
 
   if (dashboard.status !== "archived") {
+    return false;
+  }
+
+  if (hasPermission(user, "category:create_root")) {
+    return true;
+  }
+
+  return dashboard.ownerTeamId === user.teamId || hasScopedCategory(user, dashboard);
+}
+
+export function canDeleteDashboard(user: PortalUser, dashboard: Dashboard): boolean {
+  if (!hasPermission(user, "dashboard:delete")) {
     return false;
   }
 
