@@ -103,6 +103,7 @@ export function CategoryManager({
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const teamNames = useMemo(
@@ -189,6 +190,40 @@ export function CategoryManager({
       setCreateDraft(defaultDraft(teams, defaultParentId));
       setMessage({ text: "สร้างหมวดรายงานแล้ว", type: "success" });
       setIsCreateDrawerOpen(false);
+    });
+  }
+
+  function deleteCategory() {
+    if (!selectedCategory) {
+      return;
+    }
+
+    setMessage(null);
+    startTransition(async () => {
+      const response = await fetch(`/api/admin/categories/${selectedCategory.id}`, {
+        method: "DELETE",
+      });
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+        categories?: ManagedCategory[];
+      } | null;
+
+      if (!response.ok || !body?.categories) {
+        setMessage({ text: body?.error ?? "ไม่สามารถลบหมวดรายงานได้", type: "error" });
+        setIsConfirmingDelete(false);
+        return;
+      }
+
+      const remaining = body.categories;
+      setCategories(remaining);
+      setIsConfirmingDelete(false);
+      const next = remaining.find((c) => c.id !== selectedCategory.id) ?? remaining[0];
+      if (next) {
+        selectCategory(next);
+      } else {
+        setSelectedId("");
+      }
+      setMessage({ text: "ลบหมวดรายงานแล้ว", type: "success" });
     });
   }
 
@@ -491,6 +526,51 @@ export function CategoryManager({
               >
                 {isPending ? "กำลังบันทึก" : "บันทึกการแก้ไข"}
               </button>
+
+              <div className="border-t border-[oklch(0.91_0.006_250)] pt-3">
+                <p className="mb-2 text-xs font-semibold text-[oklch(0.66_0.01_255)]">โซนอันตราย</p>
+                {selectedCategory.dashboardCount > 0 ? (
+                  <p className="rounded-md border border-[oklch(0.88_0.04_25)] bg-[oklch(0.985_0.012_25)] px-3 py-2 text-xs text-[oklch(0.42_0.13_25)]">
+                    ไม่สามารถลบได้ — มีรายงาน {selectedCategory.dashboardCount.toLocaleString("th-TH")} รายการอยู่ในหมวดนี้ กรุณาย้ายรายงานออกก่อน
+                  </p>
+                ) : selectedNode && selectedNode.children.length > 0 ? (
+                  <p className="rounded-md border border-[oklch(0.88_0.04_25)] bg-[oklch(0.985_0.012_25)] px-3 py-2 text-xs text-[oklch(0.42_0.13_25)]">
+                    ไม่สามารถลบได้ — มีหมวดย่อย {selectedNode.children.length.toLocaleString("th-TH")} หมวด กรุณาลบหมวดย่อยออกก่อน
+                  </p>
+                ) : isConfirmingDelete ? (
+                  <div className="rounded-md border border-[oklch(0.88_0.04_25)] bg-[oklch(0.985_0.012_25)] p-3">
+                    <p className="text-xs font-semibold text-[oklch(0.42_0.13_25)]">ยืนยันลบหมวดรายงานนี้?</p>
+                    <p className="mt-1 text-xs text-[oklch(0.5_0.012_255)]">การลบจะไม่สามารถกู้คืนได้</p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        className={`${buttonStyles.danger} h-8 px-3 text-xs`}
+                        disabled={isPending}
+                        onClick={deleteCategory}
+                      >
+                        {isPending ? "กำลังลบ" : "ยืนยันลบ"}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${buttonStyles.secondary} h-8 px-3 text-xs`}
+                        disabled={isPending}
+                        onClick={() => setIsConfirmingDelete(false)}
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className={`${buttonStyles.danger} h-9 w-full justify-center text-sm`}
+                    disabled={isPending}
+                    onClick={() => setIsConfirmingDelete(true)}
+                  >
+                    ลบหมวดรายงานนี้
+                  </button>
+                )}
+              </div>
             </div>
           ) : null}
         </section>
