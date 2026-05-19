@@ -9,9 +9,11 @@ import {
   fieldStyles,
 } from "@/components/dashboard-ui";
 import { requireCurrentUser } from "@/lib/auth/require-current-user";
-import { listAuditEvents } from "@/lib/db/audit";
+import { countAuditEvents, listAuditEvents } from "@/lib/db/audit";
 import { hasPermission } from "@/lib/permissions";
 import type { AuditEvent } from "@/lib/portal-types";
+
+const PAGE_SIZE = 50;
 
 const entityTypes: AuditEvent["entityType"][] = ["dashboard", "category", "permission"];
 
@@ -31,63 +33,17 @@ type AuditSearchParams = {
   entity?: string;
   from?: string;
   to?: string;
+  page?: string;
 };
-
-function normalizeSearchParams(searchParams: AuditSearchParams, events: AuditEvent[]) {
-  const actionOptions = Array.from(new Set(events.map((event) => event.action))).sort();
-  const entity = entityTypes.includes(searchParams.entity as AuditEvent["entityType"])
-    ? (searchParams.entity as AuditEvent["entityType"])
-    : "all";
-
-  return {
-    q: searchParams.q?.trim() ?? "",
-    action: searchParams.action && actionOptions.includes(searchParams.action) ? searchParams.action : "all",
-    entity,
-    from: isDateInput(searchParams.from) ? searchParams.from : "",
-    to: isDateInput(searchParams.to) ? searchParams.to : "",
-    actionOptions,
-  };
-}
 
 function isDateInput(value?: string): value is string {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
 
-function auditMatchesQuery(event: AuditEvent, query: string): boolean {
-  if (!query) {
-    return true;
-  }
-
-  const searchable = [
-    event.action,
-    event.entityType,
-    event.entityId,
-    event.entityTitle,
-    event.note,
-    event.actorName,
-    event.actorUserId,
-  ]
-    .join(" ")
-    .toLocaleLowerCase("th-TH");
-
-  return searchable.includes(query.toLocaleLowerCase("th-TH"));
-}
-
-function filterAuditEvents(events: AuditEvent[], filters: ReturnType<typeof normalizeSearchParams>) {
-  const fromTime = filters.from ? new Date(`${filters.from}T00:00:00`).getTime() : null;
-  const toTime = filters.to ? new Date(`${filters.to}T23:59:59.999`).getTime() : null;
-
-  return events.filter((event) => {
-    const eventTime = new Date(event.createdAt).getTime();
-
-    return (
-      auditMatchesQuery(event, filters.q) &&
-      (filters.action === "all" || event.action === filters.action) &&
-      (filters.entity === "all" || event.entityType === filters.entity) &&
-      (fromTime === null || eventTime >= fromTime) &&
-      (toTime === null || eventTime <= toTime)
-    );
-  });
+function buildQueryString(params: Record<string, string | number | undefined>): string {
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== 0);
+  if (!entries.length) return "";
+  return "?" + entries.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join("&");
 }
 
 function AuditRow({ event }: { event: AuditEvent }) {
@@ -128,11 +84,29 @@ export default async function AuditPage({
   searchParams: Promise<AuditSearchParams>;
 }) {
   const currentUser = await requireCurrentUser();
-  const auditEvents = await listAuditEvents();
-  const filters = normalizeSearchParams(await searchParams, auditEvents);
-  const filteredAuditEvents = filterAuditEvents(auditEvents, filters);
   const canReadAudit = hasPermission(currentUser, "audit:read");
-  const dashboardEvents = auditEvents.filter((event) => event.entityType === "dashboard").length;
+
+  const raw = await searchParams;
+  const q = raw.q?.trim() ?? "";
+  const action = raw.action ?? "";
+  const entity = entityTypes.includes(raw.entity as AuditEvent["entityType"])
+    ? (raw.entity as AuditEvent["entityType"])
+    : "";
+  const from = isDateInput(raw.from) ? raw.from : "";
+  const to = isDateInput(raw.to) ? raw.to : "";
+  const page = Math.max(1, parseInt(raw.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const filter = { q, action, entity, from, to };
+
+  const [events, totalFiltered, totalAll] = await Promise.all([
+    listAuditEvents(filter, PAGE_SIZE, offset),
+    countAuditEvents(filter),
+    countAuditEvents({}),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+  const baseParams = { q: q || undefined, action: action || undefined, entity: entity || undefined, from: from || undefined, to: to || undefined };
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.003_250)] text-[oklch(0.21_0.015_255)]">
@@ -150,9 +124,9 @@ export default async function AuditPage({
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-3">
-          <MetricTile label="Events ทั้งหมด" value={auditEvents.length} tone="neutral" />
-          <MetricTile label="Events ของ Dashboard" value={dashboardEvents} tone="info" />
-          <MetricTile label="ผลลัพธ์หลังกรอง" value={filteredAuditEvents.length} tone="category" />
+          <MetricTile label="Events ทั้งหมด" value={totalAll} tone="neutral" />
+          <MetricTile label="ผลลัพธ์หลังกรอง" value={totalFiltered} tone="info" />
+          <MetricTile label="หน้าที่ดูอยู่" value={`${page} / ${totalPages}`} tone="category" />
         </section>
 
         <FilterShell>
@@ -163,19 +137,27 @@ export default async function AuditPage({
                 name="q"
                 className={`${fieldStyles} h-11 w-full`}
                 placeholder="ค้นหาด้วยผู้ทำรายการ Dashboard หรือหมายเหตุ..."
-                defaultValue={filters.q}
+                defaultValue={q}
               />
             </label>
-            <select name="action" className={`${fieldStyles} h-11 text-[oklch(0.3_0.018_255)]`} defaultValue={filters.action}>
-              <option value="all">ทุก action</option>
-              {filters.actionOptions.map((action) => (
-                <option key={action} value={action}>
-                  {action}
-                </option>
-              ))}
+            <select name="action" className={`${fieldStyles} h-11 text-[oklch(0.3_0.018_255)]`} defaultValue={action}>
+              <option value="">ทุก action</option>
+              <option value="dashboard.publish">dashboard.publish</option>
+              <option value="dashboard.reject">dashboard.reject</option>
+              <option value="dashboard.submit_review">dashboard.submit_review</option>
+              <option value="dashboard.archive">dashboard.archive</option>
+              <option value="dashboard.update">dashboard.update</option>
+              <option value="dashboard.delete">dashboard.delete</option>
+              <option value="category.create_root">category.create_root</option>
+              <option value="category.create_child">category.create_child</option>
+              <option value="category.update">category.update</option>
+              <option value="category.delete">category.delete</option>
+              <option value="permission.update">permission.update</option>
+              <option value="permission.user_status_update">permission.user_status_update</option>
+              <option value="user.delete">user.delete</option>
             </select>
-            <select name="entity" className={`${fieldStyles} h-11 text-[oklch(0.3_0.018_255)]`} defaultValue={filters.entity}>
-              <option value="all">ทุกประเภทข้อมูล</option>
+            <select name="entity" className={`${fieldStyles} h-11 text-[oklch(0.3_0.018_255)]`} defaultValue={entity}>
+              <option value="">ทุกประเภทข้อมูล</option>
               {entityTypes.map((entityType) => (
                 <option key={entityType} value={entityType}>
                   {entityType}
@@ -188,7 +170,7 @@ export default async function AuditPage({
                 name="from"
                 type="date"
                 className={`${fieldStyles} h-11 w-full text-[oklch(0.3_0.018_255)]`}
-                defaultValue={filters.from}
+                defaultValue={from}
               />
             </label>
             <label>
@@ -197,7 +179,7 @@ export default async function AuditPage({
                 name="to"
                 type="date"
                 className={`${fieldStyles} h-11 w-full text-[oklch(0.3_0.018_255)]`}
-                defaultValue={filters.to}
+                defaultValue={to}
               />
             </label>
             <button type="submit" className={`${buttonStyles.primary} h-11 justify-center`}>
@@ -208,28 +190,56 @@ export default async function AuditPage({
 
         <TableShell
           title="Audit Events"
-          description="อ่านประวัติการเปลี่ยนแปลงจาก `portal_audit_logs` โดยตรง"
+          description={`แสดง ${events.length} จาก ${totalFiltered.toLocaleString("th-TH")} รายการ`}
         >
-            <table className="w-full border-collapse text-left">
-              <thead className="bg-[oklch(0.955_0.005_250)] text-xs uppercase tracking-wide text-[oklch(0.5_0.012_255)]">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Action</th>
-                  <th className="px-4 py-3 font-semibold">ข้อมูล / หมายเหตุ</th>
-                  <th className="px-4 py-3 font-semibold">ผู้ทำรายการ</th>
-                  <th className="px-4 py-3 text-right font-semibold">เวลา</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAuditEvents.map((event) => (
-                  <AuditRow key={event.id} event={event} />
-                ))}
-              </tbody>
-            </table>
-            {!filteredAuditEvents.length ? (
-              <div className="border-t border-[oklch(0.91_0.006_250)] px-4 py-8 text-center text-sm text-[oklch(0.5_0.012_255)]">
-                ไม่พบ Audit event ที่ตรงกับเงื่อนไขการค้นหา
+          <table className="w-full border-collapse text-left">
+            <thead className="bg-[oklch(0.955_0.005_250)] text-xs uppercase tracking-wide text-[oklch(0.5_0.012_255)]">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Action</th>
+                <th className="px-4 py-3 font-semibold">ข้อมูล / หมายเหตุ</th>
+                <th className="px-4 py-3 font-semibold">ผู้ทำรายการ</th>
+                <th className="px-4 py-3 text-right font-semibold">เวลา</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((event) => (
+                <AuditRow key={event.id} event={event} />
+              ))}
+            </tbody>
+          </table>
+
+          {!events.length ? (
+            <div className="border-t border-[oklch(0.91_0.006_250)] px-4 py-8 text-center text-sm text-[oklch(0.5_0.012_255)]">
+              ไม่พบ Audit event ที่ตรงกับเงื่อนไขการค้นหา
+            </div>
+          ) : null}
+
+          {totalPages > 1 ? (
+            <div className="flex items-center justify-between border-t border-[oklch(0.91_0.006_250)] px-4 py-3">
+              <p className="text-sm text-[oklch(0.5_0.012_255)]">
+                หน้า {page} จาก {totalPages.toLocaleString("th-TH")}
+                {" · "}รายการที่ {(offset + 1).toLocaleString("th-TH")}–{Math.min(offset + PAGE_SIZE, totalFiltered).toLocaleString("th-TH")}
+              </p>
+              <div className="flex gap-2">
+                {page > 1 ? (
+                  <a
+                    href={`/audit${buildQueryString({ ...baseParams, page: page - 1 })}`}
+                    className={`${buttonStyles.secondary} h-9 px-3 text-sm`}
+                  >
+                    ← ก่อนหน้า
+                  </a>
+                ) : null}
+                {page < totalPages ? (
+                  <a
+                    href={`/audit${buildQueryString({ ...baseParams, page: page + 1 })}`}
+                    className={`${buttonStyles.secondary} h-9 px-3 text-sm`}
+                  >
+                    ถัดไป →
+                  </a>
+                ) : null}
               </div>
-            ) : null}
+            </div>
+          ) : null}
         </TableShell>
       </div>
     </main>

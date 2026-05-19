@@ -21,13 +21,13 @@ export default async function PortalLayout({
   const extraNavItems =
     userStatus === "active"
       ? [
-          ...(hasPermission(currentUser, "permission:manage")
-            ? [{ label: "ผู้ใช้งาน", href: "/admin/users" }]
-            : []),
           ...(hasPermission(currentUser, "category:update") ||
           hasPermission(currentUser, "category:create_root") ||
           hasPermission(currentUser, "category:create_child")
             ? [{ label: "หมวดรายงาน", href: "/admin/categories" }]
+            : []),
+          ...(hasPermission(currentUser, "permission:manage")
+            ? [{ label: "ผู้ใช้งาน", href: "/admin/users" }]
             : []),
           ...(canReadAudit ? [{ label: "ประวัติ Audit", href: "/audit" }] : []),
         ]

@@ -28,7 +28,20 @@ function rowToAuditEvent(row: AuditEventRow): AuditEvent {
   };
 }
 
-export async function listAuditEvents(limit = 100): Promise<AuditEvent[]> {
+type AuditFilter = {
+  q?: string;
+  action?: string;
+  entity?: string;
+  from?: string;
+  to?: string;
+};
+
+export async function listAuditEvents(
+  filter: AuditFilter = {},
+  limit = 50,
+  offset = 0,
+): Promise<AuditEvent[]> {
+  const { q = "", action = "", entity = "", from = "", to = "" } = filter;
   const [rows] = await getDbPool().query<AuditEventRow[]>(
     `
       SELECT
@@ -42,13 +55,46 @@ export async function listAuditEvents(limit = 100): Promise<AuditEvent[]> {
         note,
         created_at
       FROM portal_audit_logs
+      WHERE (:q = '' OR CONCAT_WS(' ',
+          action, entity_type, entity_id,
+          COALESCE(entity_title, ''),
+          COALESCE(note, ''),
+          actor_name, actor_user_id
+        ) LIKE :qLike)
+        AND (:action = '' OR action = :action)
+        AND (:entity = '' OR entity_type = :entity)
+        AND (:from = '' OR DATE(created_at) >= :from)
+        AND (:to = '' OR DATE(created_at) <= :to)
       ORDER BY created_at DESC
-      LIMIT :limit
+      LIMIT :limit OFFSET :offset
     `,
-    { limit },
+    { q, qLike: `%${q}%`, action, entity, from, to, limit, offset },
   );
 
   return rows.map(rowToAuditEvent);
+}
+
+export async function countAuditEvents(filter: AuditFilter = {}): Promise<number> {
+  const { q = "", action = "", entity = "", from = "", to = "" } = filter;
+  const [rows] = await getDbPool().query<(RowDataPacket & { total: number })[]>(
+    `
+      SELECT COUNT(*) AS total
+      FROM portal_audit_logs
+      WHERE (:q = '' OR CONCAT_WS(' ',
+          action, entity_type, entity_id,
+          COALESCE(entity_title, ''),
+          COALESCE(note, ''),
+          actor_name, actor_user_id
+        ) LIKE :qLike)
+        AND (:action = '' OR action = :action)
+        AND (:entity = '' OR entity_type = :entity)
+        AND (:from = '' OR DATE(created_at) >= :from)
+        AND (:to = '' OR DATE(created_at) <= :to)
+    `,
+    { q, qLike: `%${q}%`, action, entity, from, to },
+  );
+
+  return rows[0]?.total ?? 0;
 }
 
 export async function listAuditEventsForEntity(
