@@ -77,6 +77,7 @@ export function UserPermissionManager({
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [suspendTarget, setSuspendTarget] = useState<{ userId: string; reason: string } | null>(null);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<{ requestId: string; decision: "approve" | "reject"; note: string } | null>(null);
   const teamNames = useMemo(
     () => new Map(teams.map((team) => [team.id, team.name])),
@@ -143,11 +144,13 @@ export function UserPermissionManager({
     setScopeDraft(scopedCategoryIds(user));
     setCategoryQuery("");
     setMessage(null);
+    setIsConfirmingDelete(false);
   }
 
   function closePermissionEditor() {
     setSelectedUserId(null);
     setMessage(null);
+    setIsConfirmingDelete(false);
   }
 
   function toggleRole(role: PortalRole) {
@@ -339,6 +342,28 @@ export function UserPermissionManager({
         setMessage(body?.error ?? "ไม่สามารถดำเนินการคำขอได้");
         return;
       }
+      window.location.reload();
+    });
+  }
+
+  function deleteUser() {
+    if (!selectedUser) {
+      return;
+    }
+
+    setMessage(null);
+    startTransition(async () => {
+      const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setMessage(body?.error ?? "ไม่สามารถลบผู้ใช้ได้");
+        setIsConfirmingDelete(false);
+        return;
+      }
+
       window.location.reload();
     });
   }
@@ -782,6 +807,45 @@ export function UserPermissionManager({
                   {message}
                 </div>
               ) : null}
+
+              <section>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.66_0.01_255)]">โซนอันตราย</p>
+                {isConfirmingDelete ? (
+                  <div className="rounded-md border border-[oklch(0.88_0.04_25)] bg-[oklch(0.985_0.012_25)] p-3">
+                    <p className="text-xs font-semibold text-[oklch(0.42_0.13_25)]">ยืนยันลบผู้ใช้นี้ถาวร?</p>
+                    <p className="mt-1 text-xs text-[oklch(0.5_0.012_255)]">
+                      ข้อมูลสิทธิ์ทั้งหมดจะถูกลบ การกระทำนี้ไม่สามารถกู้คืนได้
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        className={`${buttonStyles.danger} h-8 px-3 text-xs`}
+                        disabled={isPending}
+                        onClick={deleteUser}
+                      >
+                        {isPending ? "กำลังลบ" : "ยืนยันลบ"}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${buttonStyles.secondary} h-8 px-3 text-xs`}
+                        disabled={isPending}
+                        onClick={() => setIsConfirmingDelete(false)}
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className={`${buttonStyles.danger} h-9 w-full justify-center text-sm`}
+                    disabled={isPending}
+                    onClick={() => setIsConfirmingDelete(true)}
+                  >
+                    ลบผู้ใช้นี้ออกจากระบบ
+                  </button>
+                )}
+              </section>
             </div>
 
             <div className="border-t border-[oklch(0.91_0.006_250)] bg-white px-5 py-4">

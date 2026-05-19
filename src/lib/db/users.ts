@@ -670,6 +670,64 @@ export async function reviewAccessRequest({
   );
 }
 
+export async function deleteManagedUser({
+  actor,
+  userId,
+}: {
+  actor: PortalUser;
+  userId: string;
+}): Promise<void> {
+  if (actor.id === userId) {
+    throw new Error("ไม่สามารถลบบัญชีของตัวเองได้");
+  }
+
+  const existingUser = await getManagedUser(userId);
+
+  if (!existingUser) {
+    throw new Error("User was not found.");
+  }
+
+  const connection = await getDbPool().getConnection();
+
+  try {
+    await connection.beginTransaction();
+    await connection.query("DELETE FROM portal_favorites WHERE user_id = :userId", { userId });
+    await connection.query("DELETE FROM portal_category_scopes WHERE user_id = :userId", { userId });
+    await connection.query("DELETE FROM portal_users WHERE id = :userId", { userId });
+    await connection.query(
+      `
+        INSERT INTO portal_audit_logs (
+          id, actor_user_id, actor_name, action,
+          entity_type, entity_id, entity_title, note, before_json, after_json
+        )
+        VALUES (
+          :id, :actorUserId, :actorName, 'user.delete',
+          'permission', :entityId, :entityTitle, :note, :beforeJson, NULL
+        )
+      `,
+      {
+        id: `audit-${randomUUID()}`,
+        actorUserId: actor.id,
+        actorName: actor.name,
+        entityId: userId,
+        entityTitle: existingUser.name,
+        note: `Deleted user ${existingUser.name} (${userId}).`,
+        beforeJson: JSON.stringify({
+          name: existingUser.name,
+          status: existingUser.status ?? "active",
+          roles: existingUser.roles,
+        }),
+      },
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 function flattenCategoryIds(categories: Category[]): string[] {
   return categories.flatMap((category) => [
     category.id,
