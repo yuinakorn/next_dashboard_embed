@@ -41,14 +41,7 @@ type CategoryOptionNode = CategoryOption & {
   children: CategoryOptionNode[];
 };
 
-const providerOptions: DashboardProvider[] = [
-  "Looker Studio",
-  "Superset",
-  "Grafana",
-  "Metabase",
-  "Power BI",
-  "Custom",
-];
+const providerOptions: DashboardProvider[] = ["BI", "Custom"];
 
 const sensitivityOptions: SensitivityLevel[] = ["public", "internal", "confidential", "restricted"];
 
@@ -68,16 +61,8 @@ function isHttpsUrl(value: string): boolean {
 }
 
 function getProviderHint(provider: DashboardProvider): string {
-  if (provider === "Looker Studio") {
-    return "Looker Studio ควรใช้ embed URL ที่มี /embed/reporting/";
-  }
-
-  if (provider === "Superset") {
-    return "Superset อาจต้องตั้งค่า embedded dashboard, guest token หรือ allow domain";
-  }
-
-  if (provider === "Power BI") {
-    return "Power BI แบบ private อาจต้องใช้ Microsoft auth หรือ embed token";
+  if (provider === "BI") {
+    return "BI Platform ภายในองค์กร ใช้ embed URL จากระบบ BI ที่ใช้งานอยู่";
   }
 
   return "ถ้า Provider บล็อก iframe ผู้ใช้ยังเปิดผ่าน external fallback ได้";
@@ -287,7 +272,7 @@ function DashboardMetadataForm({
 }) {
   const [state, setState] = useState<FormState>({
     title: dashboard?.title ?? "",
-    provider: dashboard?.provider ?? "Looker Studio",
+    provider: dashboard?.provider ?? "BI",
     description: dashboard?.description ?? "",
     categoryId: dashboard?.categoryId ?? categoryOptions[0]?.id ?? "",
     status: dashboard?.status ?? "draft",

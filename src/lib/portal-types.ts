@@ -11,6 +11,7 @@ export type DashboardProvider =
   | "Grafana"
   | "Metabase"
   | "Power BI"
+  | "BI"
   | "Custom";
 
 export type DashboardStatus = "draft" | "in_review" | "published" | "rejected" | "archived";

@@ -21,6 +21,7 @@ const providers: DashboardProvider[] = [
   "Grafana",
   "Metabase",
   "Power BI",
+  "BI",
   "Custom",
 ];
 const sensitivities: SensitivityLevel[] = ["public", "internal", "confidential", "restricted"];
